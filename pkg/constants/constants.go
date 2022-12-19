@@ -1,0 +1,19 @@
+package constants
+
+import "time"
+
+type ContextKey string
+
+func (c ContextKey) String() string {
+	return string(c)
+}
+
+const SERVICE_PORT = 50051
+const HEALTH_CHECK_URL = "/health"
+const SEARCH_URL = "/search"
+const STATS_CHECK_URL = "/stats"
+
+const READ_RATE = 500 * time.Millisecond
+const ReadRateContextKey = ContextKey("readrate")
+
+const FileNameContextKey = ContextKey("filename")
