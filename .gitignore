@@ -1,0 +1,6 @@
+cmd/store/__debug_bin
+cmd/store/config.json
+cmd/store/config.json
+cmd/store/logs
+cmd/store/cache
+cmd/client/logs

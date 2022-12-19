@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -124,11 +125,11 @@ func (c *CacheService) Clear() {
 }
 
 func (c *CacheService) SaveFile() error {
-	fileName := fmt.Sprintf("%s.json", strings.ToLower(c.name))
-	c.logger.Info("saving cache file", zap.String("cacheName", c.name))
-	file, err := os.Create(fileName)
+	filePath := filepath.Join("cache", fmt.Sprintf("%s.json", strings.ToLower(c.name)))
+	c.logger.Info("saving cache file", zap.String("filePath", filePath))
+	file, err := os.Create(filePath)
 	if err != nil {
-		c.logger.Error(ERROR_GETTING_CACHE_FILE, zap.Error(err), zap.String("cacheName", c.name))
+		c.logger.Error(ERROR_GETTING_CACHE_FILE, zap.Error(err), zap.String("filePath", filePath))
 		return ErrGetCacheFile
 	}
 	defer file.Close()
@@ -137,28 +138,28 @@ func (c *CacheService) SaveFile() error {
 	items := c.cache.Items()
 	err = encoder.Encode(items)
 	if err != nil {
-		c.logger.Error(ERROR_SAVING_CACHE_FILE, zap.Error(err), zap.String("cacheName", c.name))
+		c.logger.Error(ERROR_SAVING_CACHE_FILE, zap.Error(err), zap.String("filePath", filePath))
 		return ErrSaveCacheFile
 	}
-	c.logger.Info("cache file saved", zap.String("cacheName", c.name))
+	c.logger.Info("cache file saved", zap.String("filePath", filePath))
 	return nil
 }
 
 func (c *CacheService) LoadFile() error {
-	fileName := fmt.Sprintf("%s.json", strings.ToLower(c.name))
-	c.logger.Info("loading cache file", zap.String("cacheName", c.name))
-	file, err := os.Open(fileName)
+	filePath := filepath.Join("cache", fmt.Sprintf("%s.json", strings.ToLower(c.name)))
+	c.logger.Info("loading cache file", zap.String("filePath", filePath))
+	file, err := os.Open(filePath)
 	if err != nil {
-		c.logger.Error(ERROR_OPENING_CACHE_FILE, zap.Error(err), zap.String("cacheName", c.name))
+		c.logger.Error(ERROR_OPENING_CACHE_FILE, zap.Error(err), zap.String("filePath", filePath))
 		return err
 	}
 
 	err = c.Load(file)
 	if err != nil {
-		c.logger.Error(ERROR_LOADING_CACHE_FILE, zap.Error(err), zap.String("cacheName", c.name))
+		c.logger.Error(ERROR_LOADING_CACHE_FILE, zap.Error(err), zap.String("filePath", filePath))
 		return err
 	}
-	c.logger.Info("cache file loaded", zap.String("cacheName", c.name))
+	c.logger.Info("cache file loaded", zap.String("filePath", filePath))
 	return nil
 }
 
