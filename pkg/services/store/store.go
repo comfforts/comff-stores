@@ -2,11 +2,14 @@ package store
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"sync"
 	"time"
 
 	"github.com/comfforts/comff-stores/pkg/errors"
+	"github.com/comfforts/comff-stores/pkg/logging"
 	"github.com/comfforts/comff-stores/pkg/utils/geohash"
 	"go.uber.org/zap"
 
@@ -14,13 +17,20 @@ import (
 )
 
 type Store struct {
-	Id        uint32    `json:"store_id"`
+	ID        string    `json:"id"`
+	StoreId   uint64    `json:"store_id"`
 	Name      string    `json:"name"`
+	Org       string    `json:"org"`
 	Longitude float64   `json:"longitude"`
 	Latitude  float64   `json:"latitude"`
 	City      string    `json:"city"`
 	Country   string    `json:"country"`
 	Created   time.Time `json:"created"`
+}
+
+type StoreGeo struct {
+	Store    *Store
+	Distance float64
 }
 
 type StoreStats struct {
@@ -31,18 +41,18 @@ type StoreStats struct {
 
 type StoreService struct {
 	mu      sync.RWMutex
-	logger  *zap.Logger
-	stores  map[uint32]*Store
-	hashMap map[string][]uint32
+	logger  *logging.AppLogger
+	stores  map[string]*Store
+	hashMap map[string][]string
 	count   int
 	ready   bool
 }
 
-func New(logger *zap.Logger) *StoreService {
+func New(logger *logging.AppLogger) *StoreService {
 	ss := &StoreService{
 		logger:  logger,
-		stores:  map[uint32]*Store{},
-		hashMap: map[string][]uint32{},
+		stores:  map[string]*Store{},
+		hashMap: map[string][]string{},
 		count:   0,
 		ready:   false,
 	}
@@ -50,42 +60,66 @@ func New(logger *zap.Logger) *StoreService {
 	return ss
 }
 
-func (ss *StoreService) AddStore(ctx context.Context, s *Store) (bool, error) {
+func (ss *StoreService) AddStore(ctx context.Context, s *Store) (*Store, error) {
 	ss.mu.Lock()
 	defer ss.mu.Unlock()
 
-	if ss.lookup(s.Id) == nil {
-		hashKey, err := geohash.Encode(s.Latitude, s.Longitude, 8)
-		if err != nil {
-			ss.logger.Error(errors.ERROR_ENCODING_LAT_LONG, zap.Float64("latitude", s.Latitude), zap.Float64("longitude", s.Longitude))
-			return false, errors.WrapError(err, errors.ERROR_ENCODING_LAT_LONG)
-		}
-		hashStoreIDs, ok := ss.hashMap[hashKey]
-		if !ok {
-			hashStoreIDs = []uint32{}
-		}
-		hashStoreIDs = append(hashStoreIDs, s.Id)
-		ss.hashMap[hashKey] = hashStoreIDs
-
-		ss.stores[s.Id] = s
-		ss.count++
-
-		return true, nil
+	id, err := BuildId(s.Latitude, s.Longitude, s.Org)
+	if err != nil {
+		ss.logger.Error(errors.ERROR_ENCODING_ID, zap.String("org", s.Org), zap.Float64("latitude", s.Latitude), zap.Float64("longitude", s.Longitude))
+		return nil, errors.WrapError(err, errors.ERROR_ENCODING_LAT_LONG)
 	}
-	ss.logger.Error(errors.ERROR_STORE_ID_ALREADY_EXISTS, zap.Float64("storeId", float64(s.Id)))
-	return false, errors.NewAppError(errors.ERROR_STORE_ID_ALREADY_EXISTS)
+
+	ssLookup := ss.lookup(id)
+
+	if ssLookup != nil {
+		if s.StoreId != ssLookup.StoreId {
+			id, err = BuildIdC(id, fmt.Sprintf("%d", s.StoreId), "")
+			if err != nil {
+				ss.logger.Error(errors.ERROR_ENCODING_ID, zap.Error(err), zap.Uint64("storeId", s.StoreId))
+				return nil, errors.WrapError(err, errors.ERROR_ENCODING_ID)
+			}
+		} else if s.Name != ssLookup.Name {
+			id, err = BuildIdC(id, "", s.Name)
+			if err != nil {
+				ss.logger.Error(errors.ERROR_ENCODING_ID, zap.Error(err), zap.String("name", s.Name))
+				return nil, errors.WrapError(err, errors.ERROR_ENCODING_ID)
+			}
+		} else {
+			ss.logger.Error(errors.ERROR_STORE_ID_ALREADY_EXISTS, zap.String("id", id))
+			return nil, errors.NewAppError(errors.ERROR_STORE_ID_ALREADY_EXISTS)
+		}
+	}
+
+	hashKey, err := geohash.Encode(s.Latitude, s.Longitude, 8)
+	if err != nil {
+		ss.logger.Error(errors.ERROR_ENCODING_LAT_LONG, zap.Float64("latitude", s.Latitude), zap.Float64("longitude", s.Longitude))
+		return nil, errors.WrapError(err, errors.ERROR_ENCODING_LAT_LONG)
+	}
+	hashStoreIDs, ok := ss.hashMap[hashKey]
+	if !ok {
+		hashStoreIDs = []string{}
+	}
+	s.ID = id
+	hashStoreIDs = append(hashStoreIDs, s.ID)
+	ss.hashMap[hashKey] = hashStoreIDs
+
+	ss.stores[s.ID] = s
+	ss.count++
+
+	return s, nil
 }
 
-func (ss *StoreService) GetStore(ctx context.Context, storeId uint32) (*Store, error) {
-	s := ss.lookup(storeId)
+func (ss *StoreService) GetStore(ctx context.Context, id string) (*Store, error) {
+	s := ss.lookup(id)
 	if s == nil {
-		ss.logger.Error(errors.ERROR_NO_STORE_FOUND_FOR_ID, zap.Int("storeId", int(storeId)))
+		ss.logger.Error(errors.ERROR_NO_STORE_FOUND_FOR_ID, zap.String("id", id))
 		return nil, errors.WrapError(errors.ErrNotFound, errors.ERROR_NO_STORE_FOUND_FOR_ID)
 	}
 	return s, nil
 }
 
-func (ss *StoreService) GetStoresForGeoPoint(ctx context.Context, lat, long float64, dist int) ([]*Store, error) {
+func (ss *StoreService) GetStoresForGeoPoint(ctx context.Context, lat, long float64, dist int) ([]*StoreGeo, error) {
 	ss.logger.Debug("getting stores for geopoint", zap.Float64("latitude", lat), zap.Float64("longitude", long), zap.Int("distance", dist))
 	ids, err := ss.getStoreIdsForLatLong(ctx, lat, long)
 	if err != nil {
@@ -93,13 +127,13 @@ func (ss *StoreService) GetStoresForGeoPoint(ctx context.Context, lat, long floa
 	}
 	ss.logger.Debug("found stores", zap.Int("numOfStores", len(ids)), zap.Float64("latitude", lat), zap.Float64("longitude", long))
 
-	stores := []*Store{}
+	stores := []*StoreGeo{}
 	// origin := haversine.Point{Lat: lat, Lon: long}
 	origin := vincenty.LatLng{Latitude: lat, Longitude: long}
 	for _, v := range ids {
 		store, err := ss.GetStore(ctx, v)
 		if err != nil {
-			ss.logger.Error(errors.ERROR_NO_STORE_FOUND_FOR_ID, zap.Int("storeId", int(v)))
+			ss.logger.Error(errors.ERROR_NO_STORE_FOUND_FOR_ID, zap.String("id", v))
 		}
 		// pos := haversine.Point{Lat: store.Latitude, Lon: store.Longitude}
 		pos := vincenty.LatLng{Latitude: store.Latitude, Longitude: store.Longitude}
@@ -107,7 +141,11 @@ func (ss *StoreService) GetStoresForGeoPoint(ctx context.Context, lat, long floa
 		d := vincenty.Inverse(origin, pos)
 		// if float64(d) <= dist*1000 {
 		if d.Kilometers() <= float64(dist) {
-			stores = append(stores, store)
+			stGeo := &StoreGeo{
+				Store:    store,
+				Distance: d.Kilometers(),
+			}
+			stores = append(stores, stGeo)
 		}
 	}
 	ss.logger.Debug("returning stores", zap.Int("numOfStores", len(stores)), zap.Float64("latitude", lat), zap.Float64("longitude", long), zap.Int("distance", dist))
@@ -127,9 +165,10 @@ func (ss *StoreService) SetReady(ctx context.Context, ready bool) {
 }
 
 func (ss *StoreService) Clear() {
+	ss.logger.Info("cleaning up store data structures")
 	ss.count = 0
-	ss.stores = map[uint32]*Store{}
-	ss.hashMap = map[string][]uint32{}
+	ss.stores = map[string]*Store{}
+	ss.hashMap = map[string][]string{}
 	ss.ready = false
 }
 
@@ -147,12 +186,11 @@ func MapResultToStore(r map[string]interface{}) (*Store, error) {
 	return &s, nil
 }
 
-func (ss *StoreService) getStoreIdsForLatLong(ctx context.Context, lat, long float64) ([]uint32, error) {
+func (ss *StoreService) getStoreIdsForLatLong(ctx context.Context, lat, long float64) ([]string, error) {
 	hashKey, err := geohash.Encode(lat, long, 8)
 	if err != nil {
 		ss.logger.Error(errors.ERROR_ENCODING_LAT_LONG, zap.Float64("latitude", lat), zap.Float64("longitude", long))
-		errors.WrapError(err, errors.ERROR_ENCODING_LAT_LONG)
-		return nil, err
+		return nil, errors.WrapError(err, errors.ERROR_ENCODING_LAT_LONG)
 	}
 	ss.logger.Debug("created hash key", zap.String("hashKey", hashKey), zap.Float64("latitude", lat), zap.Float64("longitude", long))
 	ids, ok := ss.hashMap[hashKey]
@@ -163,10 +201,36 @@ func (ss *StoreService) getStoreIdsForLatLong(ctx context.Context, lat, long flo
 	return ids, nil
 }
 
-func (ss *StoreService) lookup(k uint32) *Store {
+func (ss *StoreService) lookup(k string) *Store {
 	v, ok := ss.stores[k]
 	if !ok {
 		return nil
 	}
 	return v
+}
+
+func BuildId(lat, long float64, org string) (string, error) {
+	hPart, err := geohash.Encode(lat, long, 12)
+	if err != nil {
+		return "", errors.WrapError(err, errors.ERROR_ENCODING_LAT_LONG)
+	}
+	oPart := org
+	if len(org) > 6 {
+		oPart = org[0:6]
+	}
+	encoded := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s%s", oPart, hPart)))
+	return encoded, nil
+}
+
+func BuildIdC(id string, storeId, name string) (string, error) {
+	if storeId == "" && name == "" {
+		return "", errors.NewAppError(errors.ERROR_MISSING_REQUIRED)
+	}
+	if storeId != "" {
+		return fmt.Sprintf("%s%s", id, storeId), nil
+	}
+	if len(name) > 6 {
+		name = name[0:6]
+	}
+	return fmt.Sprintf("%s%s", id, name), nil
 }
