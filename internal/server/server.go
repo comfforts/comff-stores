@@ -26,7 +26,7 @@ type Config struct {
 }
 
 type grpcServer struct {
-	api.UnimplementedStoresServer
+	api.StoresServer
 	*Config
 }
 
