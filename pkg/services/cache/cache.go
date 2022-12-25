@@ -157,7 +157,7 @@ func (c *CacheService) LoadFile() error {
 	c.logger.Info("loading cache file", zap.String("filePath", filePath))
 	file, err := os.Open(filePath)
 	if err != nil {
-		c.logger.Error(ERROR_OPENING_CACHE_FILE, zap.Error(err), zap.String("filePath", filePath))
+		c.logger.Error(ERROR_OPENING_CACHE_FILE, zap.Error(err))
 		return err
 	}
 

@@ -7,4 +7,4 @@ echo $BASEDIR
 
 cd ${BASEDIR}/../
 echo "building docker image for rev: ${CURR_SHA} for branch: ${CURR_BRANCH}"
-docker build --progress=plain --build-arg BUILD_OS=darwin --build-arg BUILD_ARCH=amd64 -t comff-stores:${CURR_SHA} -f docker/Dockerfile .
+docker build --progress=plain --build-arg BUILD_OS=linux --build-arg BUILD_ARCH=arm64 -t comff-stores:${CURR_SHA} -f docker/Dockerfile .
