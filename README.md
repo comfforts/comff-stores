@@ -18,3 +18,26 @@
 - `go get go.uber.org/zap`
 - `gitlab.com/xerra/common/vincenty`
 - `github.com/stretchr/testify`
+- `cd pkg/utils/geohash && go test -v`
+- `cd pkg/services/store && go test -v`
+- `cd internal/server && go test -v`
+
+
+- `gopkg.in/natefinch/lumberjack.v2`
+
+- `brew install grpccurl`
+- `grpcurl -plaintext localhost:8080 store.v1.Stores/GetStats`
+- `grpcurl -d '{"postalCode": "92612"}' -plaintext localhost:8080 store.v1.Stores/GeoLocate`
+- `grpcurl -d '{"postalCode": "92612", "distance": 5}' -plaintext localhost:8080 store.v1.Stores/SearchStore`
+- `grpcurl -d '{"city": "Hong Kong", "name": "Plaza Hollywood", "country": "CN", "longitude": 114.20169067382812, "latitude":  22.340700149536133, "storeId": 1}' -plaintext localhost:8080 store.v1.Stores/AddStore`
+- `grpcurl -d '{"storeId": 1}' -plaintext localhost:8080 store.v1.Stores/GetStore`
+- errors
+    - `Failed to dial target host "localhost:8080": tls: first record does not look like a TLS handshake`
+        - Use -plaintext, not -insecure. The -insecure flag means that TLS is still used, but that it does not bother authenticating the remote server (hence it being insecure). If no TLS is in use at all, -plaintext is the flag you want.
+        - `-connect-timeout` flag with `grpccurl`
+
+- grpcurl -import-path api/v1 -proto store.proto list
+
+- `cp cmd/store/config.example.json cmd/store/config.json`
+- add google api key
+- `go run store.go`

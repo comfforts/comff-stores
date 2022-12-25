@@ -7,8 +7,8 @@ import (
 )
 
 type Point struct {
-	Latitude  float64
-	Longitude float64
+	Latitude  float64 `json:"Latitude"`
+	Longitude float64 `json:"Longitude"`
 }
 type Range struct {
 	Min float64
@@ -17,6 +17,13 @@ type Range struct {
 type Bounds struct {
 	Latitude  Range
 	Longitude Range
+}
+
+var CharMap = map[string]uint{
+	"a": 1,
+	"b": 2,
+	"c": 3,
+	"d": 4,
 }
 
 func Encode(lat float64, lon float64, percision int) (string, error) {
@@ -61,17 +68,12 @@ func Encode(lat float64, lon float64, percision int) (string, error) {
 	return hash, nil
 }
 
-func Decode(hash string) (*Point, error) {
+func Decode(hash string) (*Bounds, error) {
 	boundaries, err := bounds(hash)
 	if err != nil {
 		return nil, errors.NewAppError(errors.ERROR_DECODING_BOUNDS)
 	}
-
-	var point Point
-	point.Latitude = (boundaries.Latitude.Min + boundaries.Latitude.Max) / 2
-	point.Longitude = (boundaries.Longitude.Min + boundaries.Longitude.Max) / 2
-
-	return &point, nil
+	return boundaries, nil
 }
 
 func bounds(hash string) (*Bounds, error) {

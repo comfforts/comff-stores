@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	api "github.com/comfforts/comff-stores/api/v1"
+	"github.com/comfforts/comff-stores/pkg/logging"
 	"github.com/comfforts/comff-stores/pkg/services/store"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 	"google.golang.org/grpc"
@@ -20,7 +20,7 @@ func TestServer(t *testing.T) {
 		client api.StoresClient,
 		config *Config,
 	){
-		"add and get store by id suceeds": testAddAndGetStore,
+		"add and get store by id succeeds": testAddAndGetStore,
 	} {
 		t.Run(scenario, func(t *testing.T) {
 			client, config, teardown := setupTest(t, nil)
@@ -44,7 +44,8 @@ func setupTest(t *testing.T, fn func(*Config)) (
 	require.NoError(t, err)
 
 	logger := zaptest.NewLogger(t)
-	css := store.New(logger)
+	appLogger := logging.NewAppLogger(logger, nil)
+	css := store.NewStoreService(appLogger)
 
 	cfg = &Config{
 		StoreService: css,
@@ -69,25 +70,36 @@ func setupTest(t *testing.T, fn func(*Config)) (
 	}
 }
 
-func defaulAddStoreRequest(id uint32, name, city string) *api.AddStoreRequest {
+func defaulAddStoreRequest(storeId uint64, name, org, city string) *api.AddStoreRequest {
 	s := &api.AddStoreRequest{
-		City:      city,
 		Name:      name,
+		Org:       org,
+		City:      city,
 		Country:   "CN",
 		Longitude: 114.20169067382812,
 		Latitude:  22.340700149536133,
-		StoreId:   id,
+		StoreId:   storeId,
 	}
 	return s
 }
 
 func testAddAndGetStore(t *testing.T, client api.StoresClient, config *Config) {
 	t.Helper()
-	id, name, city := 1, "Plaza Hollywood", "Hong Kong"
-	addStoreReq := defaulAddStoreRequest(uint32(id), name, city)
+	storeId, name, org, city := uint64(1), "Plaza Hollywood", "starbucks", "Hong Kong"
+	addStoreReq := defaulAddStoreRequest(storeId, name, org, city)
 
 	ctx := context.Background()
 	addStoreRes, err := client.AddStore(ctx, addStoreReq)
 	require.NoError(t, err)
-	assert.Equal(t, addStoreRes.Ok, true, "adding new store should be success")
+	require.Equal(t, addStoreRes.Ok, true)
+
+	id, err := store.BuildId(float64(addStoreReq.Latitude), float64(addStoreReq.Longitude), org)
+	require.NoError(t, err)
+	require.Equal(t, addStoreRes.Store.Id, id)
+
+	getStoreReq := &api.GetStoreRequest{Id: id}
+	ctx = context.Background()
+	getStoreRes, err := client.GetStore(ctx, getStoreReq)
+	require.NoError(t, err)
+	require.Equal(t, getStoreRes.Store.Id, id)
 }

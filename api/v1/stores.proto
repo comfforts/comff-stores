@@ -5,36 +5,91 @@ package store.v1;
 option go_package = "github.com/comfforts/comff-stores/api/store_v1";
 
 message Store {
-    uint32 id = 1;
+    string id = 1;
     string name = 2;
-    float longitude = 3;
-    float latitude = 4;
-    string city = 5;
-    string country = 6;
+    string org = 3;
+    float longitude = 4;
+    float latitude = 5;
+    string city = 6;
+    string country = 7;
+    uint64 storeId = 8;
 }
 
-message GetStoreRequest {
-    uint32 storeId = 1;
+message Point {
+    float   latitude = 1;
+    float   longitude = 2;
 }
 
-message GetStoreResponse {
+message StoreGeo {
     Store store = 1;
+    float distance = 2;
 }
 
 message AddStoreRequest {
-    uint32 storeId = 1;
-    string name = 2;
-    float longitude = 3;
-    float latitude = 4;
-    string city = 5;
-    string country = 6;
+    uint64  storeId = 1;
+    string  name = 2;
+    string  org = 3;
+    float   longitude = 4;
+    float   latitude = 5;
+    string  city = 6;
+    string  country = 7;
 }
 
 message AddStoreResponse {
+    bool    ok = 1;
+    optional Store   store = 2;
+}
+
+message GetStoreRequest {
+    string id = 1;
+}
+
+message GetStoreResponse {
+    optional Store store = 1;
+}
+
+message SearchStoreRequest {
+    float   latitude = 1;
+    float   longitude = 2;
+    string  postalCode = 3;
+    uint32    distance = 4;
+}
+
+message SearchStoreResponse {
+    repeated StoreGeo stores = 1;
+    Point geo = 2;
+}
+
+message StatsRequest {}
+
+message StatsResponse {
+    uint32 count = 1;
+    uint32 hashCount = 2;
+    bool ready = 3;
+}
+
+message GeoLocationRequest {
+    string postalCode = 1;
+}
+
+message GeoLocationResponse {
+    Point   point = 1;
+}
+
+message StoreUploadRequest {
+    string fileName = 1;
+    string path = 2;
+}
+
+message StoreUploadResponse {
     bool ok = 1;
 }
 
 service Stores {
-    rpc GetStore(GetStoreRequest) returns (GetStoreResponse) {}
     rpc AddStore(AddStoreRequest) returns (AddStoreResponse) {}
+    rpc GetStore(GetStoreRequest) returns (GetStoreResponse) {}
+    rpc SearchStore(SearchStoreRequest) returns (SearchStoreResponse) {}
+    rpc GetStats(StatsRequest) returns (StatsResponse) {}
+    rpc GeoLocate(GeoLocationRequest) returns (GeoLocationResponse) {}
+    rpc StoreUpload(StoreUploadRequest) returns (StoreUploadResponse) {}
 }

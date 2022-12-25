@@ -1,14 +1,16 @@
-cmd/store/__debug_bin
-cmd/store/config.json
-cmd/store/creds
+.vscode
+README.md
+.gitignore
+
 cmd/store/logs
 cmd/store/cache
-cmd/client/logs
+cmd/client
+scripts
 
 pkg/jobs/creds
 pkg/jobs/test-config.json
 
+pkg/services/geocode/test-config.json
+
 pkg/services/filestorage/creds
 pkg/services/filestorage/test-config.json
-
-pkg/services/geocode/test-config.json
