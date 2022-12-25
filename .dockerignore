@@ -1,0 +1,16 @@
+.vscode
+README.md
+.gitignore
+
+cmd/store/logs
+cmd/store/cache
+cmd/client
+scripts
+
+pkg/jobs/creds
+pkg/jobs/test-config.json
+
+pkg/services/geocode/test-config.json
+
+pkg/services/filestorage/creds
+pkg/services/filestorage/test-config.json
