@@ -17,3 +17,4 @@ const READ_RATE = 500 * time.Millisecond
 const ReadRateContextKey = ContextKey("readrate")
 
 const FileNameContextKey = ContextKey("filename")
+const FilePathContextKey = ContextKey("filepath")

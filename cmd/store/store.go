@@ -22,6 +22,7 @@ import (
 )
 
 func main() {
+	ctx := context.Background()
 	servicePort := fmt.Sprintf(":%d", constants.SERVICE_PORT)
 	listener, err := net.Listen("tcp", servicePort)
 	if err != nil {
@@ -36,11 +37,11 @@ func main() {
 	logger := logging.NewAppLogger(nil, logCfg)
 
 	// initialize store service instance
-	storeServ := store.New(logger)
+	storeServ := store.NewStoreService(logger)
 
 	// create app config,
 	// throws app startup error if required config is missing
-	appCfg, err := appConfig.GetAppConfig(logger)
+	appCfg, err := appConfig.GetAppConfig(logger, "")
 	if err != nil {
 		logger.Fatal("unable to setup config", zap.Error(err))
 		return
@@ -49,15 +50,21 @@ func main() {
 	// create geo coding service instance,
 	// requires config and logger instance
 	// throws app startup error
-	geoServ, err := geocode.NewGeoCodeService(appCfg, logger)
+	geoServ, err := geocode.NewGeoCodeService(appCfg.Services.GeoCodeCfg, logger)
 	if err != nil {
 		logger.Fatal("error initializing maps client", zap.Error(err))
 		return
 	}
 
+	storeLoader, err := jobs.NewStoreLoader(appCfg.Jobs.StoreLoaderConfig, storeServ, logger)
+	if err != nil {
+		logger.Error("error creating store loader", zap.Error(err), zap.Any("errorType", reflect.TypeOf(err)))
+	}
+
 	servCfg := &server.Config{
 		StoreService: storeServ,
 		GeoService:   geoServ,
+		StoreLoader:  storeLoader,
 		Logger:       logger,
 	}
 
@@ -67,10 +74,6 @@ func main() {
 		logger.Error("error starting server", zap.Error(err))
 		panic(err)
 	}
-
-	jsonDataLoader := jobs.NewJSONDataLoader(storeServ, logger)
-	logger.Info("starting store loader background job")
-	go jsonDataLoader.ProcessFile()
 
 	// start listening for rpc requests
 	go func() {
@@ -92,7 +95,7 @@ func main() {
 	logger.Info("clearing server geo code data")
 	geoServ.Clear()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer func() {
 		if err := listener.Close(); err != nil {
 			logger.Error("error closing network listener", zap.Error(err), zap.Any("errorType", reflect.TypeOf(err)))

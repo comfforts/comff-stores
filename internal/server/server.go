@@ -12,6 +12,7 @@ import (
 
 	api "github.com/comfforts/comff-stores/api/v1"
 
+	"github.com/comfforts/comff-stores/pkg/jobs"
 	"github.com/comfforts/comff-stores/pkg/logging"
 	"github.com/comfforts/comff-stores/pkg/services/geocode"
 	"github.com/comfforts/comff-stores/pkg/services/store"
@@ -22,6 +23,7 @@ var _ api.StoresServer = (*grpcServer)(nil)
 type Config struct {
 	StoreService *store.StoreService
 	GeoService   *geocode.GeoCodeService
+	StoreLoader  *jobs.StoreLoader
 	Logger       *logging.AppLogger
 }
 
@@ -102,9 +104,6 @@ func (s *grpcServer) GetStats(ctx context.Context, req *api.StatsRequest) (*api.
 func (s *grpcServer) SearchStore(ctx context.Context, req *api.SearchStoreRequest) (*api.SearchStoreResponse, error) {
 	if (req.Latitude == 0 || req.Longitude == 0) && req.PostalCode == "" {
 		st := status.New(codes.NotFound, "missing required search params")
-		fmt.Println()
-		fmt.Println(req)
-		fmt.Println()
 		s.Logger.Error("missing required search params")
 		return nil, st.Err()
 	}
@@ -149,5 +148,23 @@ func (s *grpcServer) GeoLocate(ctx context.Context, req *api.GeoLocationRequest)
 			Latitude:  float32(point.Latitude),
 			Longitude: float32(point.Longitude),
 		},
+	}, nil
+}
+
+func (s *grpcServer) StoreUpload(ctx context.Context, req *api.StoreUploadRequest) (*api.StoreUploadResponse, error) {
+	fPath := req.FileName
+	if req.Path != "" {
+		fPath = fmt.Sprintf("%s/%s", req.Path, req.FileName)
+	}
+
+	err := s.StoreLoader.ProcessFile(ctx, req.FileName)
+	if err != nil {
+		s.Logger.Error("error completing store upload request", zap.Error(err), zap.String("file", fPath))
+		st := status.New(codes.NotFound, "error completing store upload request")
+		return nil, st.Err()
+	}
+
+	return &api.StoreUploadResponse{
+		Ok: true,
 	}, nil
 }

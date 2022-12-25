@@ -45,7 +45,7 @@ func setupTest(t *testing.T, fn func(*Config)) (
 
 	logger := zaptest.NewLogger(t)
 	appLogger := logging.NewAppLogger(logger, nil)
-	css := store.New(appLogger)
+	css := store.NewStoreService(appLogger)
 
 	cfg = &Config{
 		StoreService: css,

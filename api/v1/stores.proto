@@ -57,7 +57,7 @@ message SearchStoreRequest {
 
 message SearchStoreResponse {
     repeated StoreGeo stores = 1;
-    optional Point geo = 2;
+    Point geo = 2;
 }
 
 message StatsRequest {}
@@ -76,10 +76,20 @@ message GeoLocationResponse {
     Point   point = 1;
 }
 
+message StoreUploadRequest {
+    string fileName = 1;
+    string path = 2;
+}
+
+message StoreUploadResponse {
+    bool ok = 1;
+}
+
 service Stores {
     rpc AddStore(AddStoreRequest) returns (AddStoreResponse) {}
     rpc GetStore(GetStoreRequest) returns (GetStoreResponse) {}
     rpc SearchStore(SearchStoreRequest) returns (SearchStoreResponse) {}
     rpc GetStats(StatsRequest) returns (StatsResponse) {}
     rpc GeoLocate(GeoLocationRequest) returns (GeoLocationResponse) {}
+    rpc StoreUpload(StoreUploadRequest) returns (StoreUploadResponse) {}
 }
