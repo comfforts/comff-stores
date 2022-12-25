@@ -1,4 +1,21 @@
 {
-    "geocoder_api_key":  "APIKEY%^$&*#APIKEY",
-    "port": 8080
+    "service_port": 8080,
+    "services": {
+        "cloud_storage": {
+            "creds_path": "creds/mustum-420420-z335d4c3c763.json",
+            "bucket_name": "mustum-data"
+        },
+        "geo_code": {
+            "geocoder_key":  "APIKEY%^$&*#APIKEY"
+        }
+    },
+    "jobs": {
+        "store_loader": {
+            "cloud_storage": {
+                "creds_path": "creds/mustum-420420-z335d4c3c763.json",
+                "bucket_name": "mustum-data"
+            },
+            "data_path": "data"
+        }
+    }
 }
