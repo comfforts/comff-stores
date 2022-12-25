@@ -66,28 +66,48 @@ type LatLng struct {
 type GeoCodeService struct {
 	host   string
 	path   string
-	config *config.Configuration
+	config config.GeoCodeServiceConfig
 	logger *logging.AppLogger
 	cache  *cache.CacheService
 }
 
-func NewGeoCodeService(config *config.Configuration, logger *logging.AppLogger) (*GeoCodeService, error) {
-	if config == nil || logger == nil {
+func unmarshalLPoint(p interface{}) (interface{}, error) {
+	var point geohash.Point
+	body, err := json.Marshal(p)
+	if err != nil {
+		appErr := errors.WrapError(err, cache.ERROR_MARSHALLING_CACHE_OBJECT)
+		return point, appErr
+	}
+
+	err = json.Unmarshal(body, &point)
+	if err != nil {
+		appErr := errors.WrapError(err, cache.ERROR_UNMARSHALLING_CACHE_JSON)
+		return point, appErr
+	}
+	return point, nil
+}
+
+func NewGeoCodeService(config config.GeoCodeServiceConfig, logger *logging.AppLogger) (*GeoCodeService, error) {
+	if config.GeocoderKey == "" || logger == nil {
 		return nil, errors.NewAppError(errors.ERROR_MISSING_REQUIRED)
 	}
 
-	c, err := cache.NewCacheService("GEOCODE", config, logger, unmarshalLPoint)
-	if err != nil {
-		logger.Error("error setting up cache service", zap.Error(err))
-		return nil, err
-	}
-	return &GeoCodeService{
+	geocoderSrv := GeoCodeService{
 		host:   "https://maps.googleapis.com",
 		path:   "/maps/api/geocode/json",
 		config: config,
 		logger: logger,
-		cache:  c,
-	}, nil
+	}
+
+	if config.IsCached {
+		c, err := cache.NewCacheService("GEOCODE", logger, unmarshalLPoint)
+		if err != nil {
+			logger.Error("error setting up cache service", zap.Error(err))
+			return nil, err
+		}
+		geocoderSrv.cache = c
+	}
+	return &geocoderSrv, nil
 }
 
 func (g *GeoCodeService) Geocode(ctx context.Context, postalCode, countryCode string) (*geohash.Point, error) {
@@ -96,10 +116,14 @@ func (g *GeoCodeService) Geocode(ctx context.Context, postalCode, countryCode st
 		return nil, errors.ErrNilContext
 	}
 
-	point, exp, err := g.getFromCache(postalCode)
-	if err == nil {
-		g.logger.Info("returning cached value", zap.String("postalCode", postalCode), zap.Any("exp", exp))
-		return point, nil
+	if g.config.IsCached {
+		point, exp, err := g.getFromCache(postalCode)
+		if err == nil {
+			g.logger.Info("returning cached value", zap.String("postalCode", postalCode), zap.Any("exp", exp))
+			return point, nil
+		} else {
+			g.logger.Error("geocoder cache get error", zap.Error(err), zap.String("postalCode", postalCode))
+		}
 	}
 
 	if countryCode == "" {
@@ -127,9 +151,11 @@ func (g *GeoCodeService) Geocode(ctx context.Context, postalCode, countryCode st
 		Longitude: long,
 	}
 
-	err = g.setInCache(postalCode, geoPoint)
-	if err != nil {
-		g.logger.Error("geocoder cache set error", zap.Error(err), zap.String("postalCode", postalCode))
+	if g.config.IsCached {
+		err = g.setInCache(postalCode, geoPoint)
+		if err != nil {
+			g.logger.Error("geocoder cache set error", zap.Error(err), zap.String("postalCode", postalCode))
+		}
 	}
 
 	return &geoPoint, nil
@@ -137,11 +163,13 @@ func (g *GeoCodeService) Geocode(ctx context.Context, postalCode, countryCode st
 
 func (g *GeoCodeService) Clear() {
 	g.logger.Info("cleaning up geo code data structures")
-	g.cache.SaveFile()
+	if g.config.IsCached {
+		g.cache.SaveFile()
+	}
 }
 
 func (g *GeoCodeService) postalCodeURL(countryCode, postalCode string) string {
-	return fmt.Sprintf("%s%s?components=country:%s|postal_code:%s&sensor=false&key=%s", g.host, g.path, countryCode, postalCode, g.config.GEOCODER_API_KEY)
+	return fmt.Sprintf("%s%s?components=country:%s|postal_code:%s&sensor=false&key=%s", g.host, g.path, countryCode, postalCode, g.config.GeocoderKey)
 }
 
 func (g *GeoCodeService) getFromCache(postalCode string) (*geohash.Point, time.Time, error) {
@@ -165,20 +193,4 @@ func (g *GeoCodeService) setInCache(postalCode string, point geohash.Point) erro
 		return err
 	}
 	return nil
-}
-
-func unmarshalLPoint(p interface{}) (interface{}, error) {
-	var point geohash.Point
-	body, err := json.Marshal(p)
-	if err != nil {
-		appErr := errors.WrapError(err, cache.ERROR_MARSHALLING_CACHE_OBJECT)
-		return point, appErr
-	}
-
-	err = json.Unmarshal(body, &point)
-	if err != nil {
-		appErr := errors.WrapError(err, cache.ERROR_UNMARSHALLING_CACHE_JSON)
-		return point, appErr
-	}
-	return point, nil
 }

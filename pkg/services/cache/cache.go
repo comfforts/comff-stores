@@ -12,14 +12,15 @@ import (
 	"github.com/patrickmn/go-cache"
 	"go.uber.org/zap"
 
-	"github.com/comfforts/comff-stores/pkg/config"
 	"github.com/comfforts/comff-stores/pkg/errors"
 	"github.com/comfforts/comff-stores/pkg/logging"
+	fileUtils "github.com/comfforts/comff-stores/pkg/utils/file"
 )
 
 const (
 	ERROR_SET_CACHE                string = "error adding key/value to cache"
 	ERROR_GET_CACHE                string = "error getting key/value from cache"
+	ERROR_CREATING_CACHE_DIR       string = "error creating cache directory"
 	ERROR_GETTING_CACHE_FILE       string = "error getting cache file"
 	ERROR_SAVING_CACHE_FILE        string = "error saving cache file"
 	ERROR_OPENING_CACHE_FILE       string = "error opening cache file"
@@ -43,18 +44,17 @@ var (
 	ErrSaveCacheFile = errors.NewAppError(ERROR_SAVING_CACHE_FILE)
 )
 
+type MarshalFn func(p interface{}) (interface{}, error)
+
 type CacheService struct {
 	name      string
 	cache     *cache.Cache
-	config    *config.Configuration
 	logger    *logging.AppLogger
 	marshalFn MarshalFn
 }
 
-type MarshalFn func(p interface{}) (interface{}, error)
-
-func NewCacheService(name string, config *config.Configuration, logger *logging.AppLogger, marshalFn MarshalFn) (*CacheService, error) {
-	if name == "" || config == nil || logger == nil {
+func NewCacheService(name string, logger *logging.AppLogger, marshalFn MarshalFn) (*CacheService, error) {
+	if name == "" || logger == nil {
 		return nil, errors.NewAppError(errors.ERROR_MISSING_REQUIRED)
 	}
 	default_expiration := 5 * time.Minute
@@ -64,7 +64,6 @@ func NewCacheService(name string, config *config.Configuration, logger *logging.
 	cacheService := &CacheService{
 		name:      name,
 		cache:     c,
-		config:    config,
 		logger:    logger,
 		marshalFn: marshalFn,
 	}
@@ -72,6 +71,7 @@ func NewCacheService(name string, config *config.Configuration, logger *logging.
 	err := cacheService.LoadFile()
 	if err != nil {
 		logger.Error(ERROR_LOADING_CACHE_FILE, zap.Error(err), zap.String("cacheName", name))
+		logger.Info("starting with fresh cache")
 	}
 
 	return cacheService, nil
@@ -127,6 +127,13 @@ func (c *CacheService) Clear() {
 func (c *CacheService) SaveFile() error {
 	filePath := filepath.Join("cache", fmt.Sprintf("%s.json", strings.ToLower(c.name)))
 	c.logger.Info("saving cache file", zap.String("filePath", filePath))
+
+	err := fileUtils.CreateDirectory(filePath)
+	if err != nil {
+		c.logger.Error(ERROR_CREATING_CACHE_DIR, zap.Error(err), zap.String("filePath", filePath))
+		return ErrSaveCacheFile
+	}
+
 	file, err := os.Create(filePath)
 	if err != nil {
 		c.logger.Error(ERROR_GETTING_CACHE_FILE, zap.Error(err), zap.String("filePath", filePath))

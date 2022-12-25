@@ -17,7 +17,7 @@ import (
 )
 
 type Store struct {
-	ID        string    `json:"id"`
+	ID        string    `json:"id,omitempty"`
 	StoreId   uint64    `json:"store_id"`
 	Name      string    `json:"name"`
 	Org       string    `json:"org"`
@@ -48,7 +48,7 @@ type StoreService struct {
 	ready   bool
 }
 
-func New(logger *logging.AppLogger) *StoreService {
+func NewStoreService(logger *logging.AppLogger) *StoreService {
 	ss := &StoreService{
 		logger:  logger,
 		stores:  map[string]*Store{},
@@ -71,7 +71,6 @@ func (ss *StoreService) AddStore(ctx context.Context, s *Store) (*Store, error) 
 	}
 
 	ssLookup := ss.lookup(id)
-
 	if ssLookup != nil {
 		if s.StoreId != ssLookup.StoreId {
 			id, err = BuildIdC(id, fmt.Sprintf("%d", s.StoreId), "")
@@ -158,6 +157,14 @@ func (ss *StoreService) GetStoreStats() StoreStats {
 		Count:     ss.count,
 		HashCount: len(ss.hashMap),
 	}
+}
+
+func (ss *StoreService) GetAllStores() []*Store {
+	stores := []*Store{}
+	for _, v := range ss.stores {
+		stores = append(stores, v)
+	}
+	return stores
 }
 
 func (ss *StoreService) SetReady(ctx context.Context, ready bool) {
