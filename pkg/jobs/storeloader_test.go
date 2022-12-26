@@ -2,7 +2,6 @@ package jobs
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,8 +9,10 @@ import (
 
 	"github.com/comfforts/comff-stores/pkg/config"
 	"github.com/comfforts/comff-stores/pkg/logging"
+	"github.com/comfforts/comff-stores/pkg/services/filestorage"
 	"github.com/comfforts/comff-stores/pkg/services/store"
-	"github.com/comfforts/comff-stores/pkg/utils/file"
+	fileUtils "github.com/comfforts/comff-stores/pkg/utils/file"
+	testUtils "github.com/comfforts/comff-stores/pkg/utils/test"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
@@ -28,7 +29,7 @@ func TestStoreLoaderJob(t *testing.T) {
 		"local file processing succeeds": testProcessingLocalFile,
 		"cloud file processing succeeds": testProcessingCloudFile,
 	} {
-		testDir := "testing_store_loader/"
+		testDir := "testing_store_loader"
 		t.Run(scenario, func(t *testing.T) {
 			loader, teardown := setupStoreLoader(t, testDir)
 			defer teardown()
@@ -44,7 +45,7 @@ func setupStoreLoader(t *testing.T, testDir string) (
 	t.Helper()
 
 	t.Logf(" setupStoreLoader: creating test directory %s", testDir)
-	err := file.CreateDirectory(testDir)
+	err := fileUtils.CreateDirectory(fmt.Sprintf("%s/", testDir))
 	require.NoError(t, err)
 
 	logger := zaptest.NewLogger(t)
@@ -55,9 +56,13 @@ func setupStoreLoader(t *testing.T, testDir string) (
 	appCfg, err := config.GetAppConfig(appLogger, "test-config.json")
 	require.NoError(t, err)
 
+	cscCfg := appCfg.Services.CloudStorageClientCfg
+	csc, err := filestorage.NewCloudStorageClient(appLogger, cscCfg)
+	require.NoError(t, err)
+
 	slCfg := appCfg.Jobs.StoreLoaderConfig
 
-	sl, err = NewStoreLoader(slCfg, ss, appLogger)
+	sl, err = NewStoreLoader(slCfg, ss, csc, appLogger)
 	require.NoError(t, err)
 
 	return sl, func() {
@@ -73,12 +78,12 @@ func setupStoreLoader(t *testing.T, testDir string) (
 }
 
 func testFileStats(t *testing.T, loader *StoreLoader, testDir string) {
-	name := "starbucks"
-	fPath, err := createJSONFile(filepath.Join(testDir, "test"), name)
+	name := "test"
+	fPath, err := testUtils.CreateJSONFile(testDir, name)
 	require.NoError(t, err)
 
 	require.Equal(t, ".json", filepath.Ext(fPath))
-	require.Equal(t, "starbucks.json", filepath.Base(fPath))
+	require.Equal(t, "test.json", filepath.Base(fPath))
 
 	dir, err := os.Getwd()
 	require.NoError(t, err)
@@ -90,7 +95,7 @@ func testFileStats(t *testing.T, loader *StoreLoader, testDir string) {
 
 func testSaveDataFile(t *testing.T, loader *StoreLoader, testDir string) {
 	name := "test"
-	fPath, err := createJSONFile(testDir, name)
+	fPath, err := testUtils.CreateJSONFile(testDir, name)
 	require.NoError(t, err)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -102,7 +107,7 @@ func testSaveDataFile(t *testing.T, loader *StoreLoader, testDir string) {
 
 func testUploadDataFile(t *testing.T, loader *StoreLoader, testDir string) {
 	name := "test"
-	fPath, err := createJSONFile(testDir, name)
+	fPath, err := testUtils.CreateJSONFile(testDir, name)
 	require.NoError(t, err)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -117,7 +122,7 @@ func testUploadDataFile(t *testing.T, loader *StoreLoader, testDir string) {
 
 func testProcessingLocalFile(t *testing.T, loader *StoreLoader, testDir string) {
 	name := "test"
-	fPath, err := createJSONFile(testDir, name)
+	fPath, err := testUtils.CreateJSONFile(testDir, name)
 	require.NoError(t, err)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -134,55 +139,4 @@ func testProcessingCloudFile(t *testing.T, loader *StoreLoader, testDir string) 
 	fPath := filepath.Join(testDir, "test.json")
 	err := loader.ProcessFile(ctx, fPath)
 	require.NoError(t, err)
-}
-
-func createJSONFile(dir, name string) (string, error) {
-	fPath := fmt.Sprintf("%s.json", name)
-	if dir != "" {
-		fPath = fmt.Sprintf("%s/%s", dir, fPath)
-	}
-	items := []Result{
-		{
-			"city":      "Hong Kong",
-			"name":      "Plaza Hollywood",
-			"country":   "CN",
-			"longitude": 114.20169067382812,
-			"latitude":  22.340700149536133,
-			"store_id":  1,
-		},
-		{
-			"city":      "Hong Kong",
-			"name":      "Exchange Square",
-			"country":   "CN",
-			"longitude": 114.15818786621094,
-			"latitude":  22.283939361572266,
-			"store_id":  6,
-		},
-		{
-			"city":      "Kowloon",
-			"name":      "Telford Plaza",
-			"country":   "CN",
-			"longitude": 114.21343994140625,
-			"latitude":  22.3228702545166,
-			"store_id":  8,
-		},
-	}
-
-	err := file.CreateDirectory(fPath)
-	if err != nil {
-		return "", err
-	}
-
-	f, err := os.Create(fPath)
-	if err != nil {
-		return "", err
-	}
-	defer f.Close()
-
-	encoder := json.NewEncoder(f)
-	err = encoder.Encode(items)
-	if err != nil {
-		return "", err
-	}
-	return fPath, nil
 }

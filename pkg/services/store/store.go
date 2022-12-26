@@ -6,43 +6,20 @@ import (
 	"encoding/json"
 	"fmt"
 	"sync"
-	"time"
 
 	"github.com/comfforts/comff-stores/pkg/errors"
 	"github.com/comfforts/comff-stores/pkg/logging"
+	storeModels "github.com/comfforts/comff-stores/pkg/models/store"
 	"github.com/comfforts/comff-stores/pkg/utils/geohash"
 	"go.uber.org/zap"
 
 	"gitlab.com/xerra/common/vincenty"
 )
 
-type Store struct {
-	ID        string    `json:"id,omitempty"`
-	StoreId   uint64    `json:"store_id"`
-	Name      string    `json:"name"`
-	Org       string    `json:"org"`
-	Longitude float64   `json:"longitude"`
-	Latitude  float64   `json:"latitude"`
-	City      string    `json:"city"`
-	Country   string    `json:"country"`
-	Created   time.Time `json:"created"`
-}
-
-type StoreGeo struct {
-	Store    *Store
-	Distance float64
-}
-
-type StoreStats struct {
-	Count     int
-	HashCount int
-	Ready     bool
-}
-
 type StoreService struct {
 	mu      sync.RWMutex
 	logger  *logging.AppLogger
-	stores  map[string]*Store
+	stores  map[string]*storeModels.Store
 	hashMap map[string][]string
 	count   int
 	ready   bool
@@ -51,7 +28,7 @@ type StoreService struct {
 func NewStoreService(logger *logging.AppLogger) *StoreService {
 	ss := &StoreService{
 		logger:  logger,
-		stores:  map[string]*Store{},
+		stores:  map[string]*storeModels.Store{},
 		hashMap: map[string][]string{},
 		count:   0,
 		ready:   false,
@@ -60,7 +37,7 @@ func NewStoreService(logger *logging.AppLogger) *StoreService {
 	return ss
 }
 
-func (ss *StoreService) AddStore(ctx context.Context, s *Store) (*Store, error) {
+func (ss *StoreService) AddStore(ctx context.Context, s *storeModels.Store) (*storeModels.Store, error) {
 	ss.mu.Lock()
 	defer ss.mu.Unlock()
 
@@ -109,7 +86,7 @@ func (ss *StoreService) AddStore(ctx context.Context, s *Store) (*Store, error) 
 	return s, nil
 }
 
-func (ss *StoreService) GetStore(ctx context.Context, id string) (*Store, error) {
+func (ss *StoreService) GetStore(ctx context.Context, id string) (*storeModels.Store, error) {
 	s := ss.lookup(id)
 	if s == nil {
 		ss.logger.Error(errors.ERROR_NO_STORE_FOUND_FOR_ID, zap.String("id", id))
@@ -118,7 +95,7 @@ func (ss *StoreService) GetStore(ctx context.Context, id string) (*Store, error)
 	return s, nil
 }
 
-func (ss *StoreService) GetStoresForGeoPoint(ctx context.Context, lat, long float64, dist int) ([]*StoreGeo, error) {
+func (ss *StoreService) GetStoresForGeoPoint(ctx context.Context, lat, long float64, dist int) ([]*storeModels.StoreGeo, error) {
 	ss.logger.Debug("getting stores for geopoint", zap.Float64("latitude", lat), zap.Float64("longitude", long), zap.Int("distance", dist))
 	ids, err := ss.getStoreIdsForLatLong(ctx, lat, long)
 	if err != nil {
@@ -126,7 +103,7 @@ func (ss *StoreService) GetStoresForGeoPoint(ctx context.Context, lat, long floa
 	}
 	ss.logger.Debug("found stores", zap.Int("numOfStores", len(ids)), zap.Float64("latitude", lat), zap.Float64("longitude", long))
 
-	stores := []*StoreGeo{}
+	stores := []*storeModels.StoreGeo{}
 	// origin := haversine.Point{Lat: lat, Lon: long}
 	origin := vincenty.LatLng{Latitude: lat, Longitude: long}
 	for _, v := range ids {
@@ -140,7 +117,7 @@ func (ss *StoreService) GetStoresForGeoPoint(ctx context.Context, lat, long floa
 		d := vincenty.Inverse(origin, pos)
 		// if float64(d) <= dist*1000 {
 		if d.Kilometers() <= float64(dist) {
-			stGeo := &StoreGeo{
+			stGeo := &storeModels.StoreGeo{
 				Store:    store,
 				Distance: d.Kilometers(),
 			}
@@ -151,16 +128,16 @@ func (ss *StoreService) GetStoresForGeoPoint(ctx context.Context, lat, long floa
 	return stores, nil
 }
 
-func (ss *StoreService) GetStoreStats() StoreStats {
-	return StoreStats{
+func (ss *StoreService) GetStoreStats() storeModels.StoreStats {
+	return storeModels.StoreStats{
 		Ready:     ss.ready,
 		Count:     ss.count,
 		HashCount: len(ss.hashMap),
 	}
 }
 
-func (ss *StoreService) GetAllStores() []*Store {
-	stores := []*Store{}
+func (ss *StoreService) GetAllStores() []*storeModels.Store {
+	stores := []*storeModels.Store{}
 	for _, v := range ss.stores {
 		stores = append(stores, v)
 	}
@@ -174,18 +151,18 @@ func (ss *StoreService) SetReady(ctx context.Context, ready bool) {
 func (ss *StoreService) Clear() {
 	ss.logger.Info("cleaning up store data structures")
 	ss.count = 0
-	ss.stores = map[string]*Store{}
+	ss.stores = map[string]*storeModels.Store{}
 	ss.hashMap = map[string][]string{}
 	ss.ready = false
 }
 
-func MapResultToStore(r map[string]interface{}) (*Store, error) {
+func MapResultToStore(r map[string]interface{}) (*storeModels.Store, error) {
 	storeJson, err := json.Marshal(r)
 	if err != nil {
 		return nil, errors.WrapError(err, errors.ERROR_MARSHALLING_RESULT)
 	}
 
-	var s Store
+	var s storeModels.Store
 	err = json.Unmarshal(storeJson, &s)
 	if err != nil {
 		return nil, errors.WrapError(err, errors.ERROR_UNMARSHALLING_STORE_JSON)
@@ -208,7 +185,7 @@ func (ss *StoreService) getStoreIdsForLatLong(ctx context.Context, lat, long flo
 	return ids, nil
 }
 
-func (ss *StoreService) lookup(k string) *Store {
+func (ss *StoreService) lookup(k string) *storeModels.Store {
 	v, ok := ss.stores[k]
 	if !ok {
 		return nil

@@ -2,19 +2,18 @@
     "service_port": 8080,
     "services": {
         "cloud_storage": {
-            "creds_path": "creds/mustum-420420-z335d4c3c763.json",
-            "bucket_name": "mustum-data"
+            "creds_path": "creds/mustum-420420-z335d4c3c763.json"
         },
         "geo_code": {
-            "geocoder_key":  "APIKEY%^$&*#APIKEY"
+            "geocoder_key":  "APIKEY%^$&*#APIKEY",
+            "cached": true,
+            "data_path": "geo",
+            "bucket_name": "mustum-data"
         }
     },
     "jobs": {
         "store_loader": {
-            "cloud_storage": {
-                "creds_path": "creds/mustum-420420-z335d4c3c763.json",
-                "bucket_name": "mustum-data"
-            },
+            "bucket_name": "fustum-data",
             "data_path": "data"
         }
     }

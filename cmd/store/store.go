@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -15,6 +16,7 @@ import (
 	"github.com/comfforts/comff-stores/pkg/constants"
 	"github.com/comfforts/comff-stores/pkg/jobs"
 	"github.com/comfforts/comff-stores/pkg/logging"
+	"github.com/comfforts/comff-stores/pkg/services/filestorage"
 	"github.com/comfforts/comff-stores/pkg/services/geocode"
 	"github.com/comfforts/comff-stores/pkg/services/store"
 	"go.uber.org/zap"
@@ -23,11 +25,6 @@ import (
 
 func main() {
 	ctx := context.Background()
-	servicePort := fmt.Sprintf(":%d", constants.SERVICE_PORT)
-	listener, err := net.Listen("tcp", servicePort)
-	if err != nil {
-		panic(err)
-	}
 
 	// initialize app logger instance
 	logCfg := &logging.AppLoggerConfig{
@@ -36,27 +33,29 @@ func main() {
 	}
 	logger := logging.NewAppLogger(nil, logCfg)
 
-	// initialize store service instance
-	storeServ := store.NewStoreService(logger)
-
-	// create app config,
-	// throws app startup error if required config is missing
+	// create app config
 	appCfg, err := appConfig.GetAppConfig(logger, "")
 	if err != nil {
 		logger.Fatal("unable to setup config", zap.Error(err))
 		return
 	}
 
-	// create geo coding service instance,
-	// requires config and logger instance
-	// throws app startup error
-	geoServ, err := geocode.NewGeoCodeService(appCfg.Services.GeoCodeCfg, logger)
+	csc, err := filestorage.NewCloudStorageClient(logger, appCfg.Services.CloudStorageClientCfg)
+	if err != nil {
+		logger.Error("error creating cloud storage client", zap.Error(err))
+	}
+
+	// create geo coding service instance
+	geoServ, err := geocode.NewGeoCodeService(appCfg.Services.GeoCodeCfg, csc, logger)
 	if err != nil {
 		logger.Fatal("error initializing maps client", zap.Error(err))
 		return
 	}
 
-	storeLoader, err := jobs.NewStoreLoader(appCfg.Jobs.StoreLoaderConfig, storeServ, logger)
+	// initialize store service instance
+	storeServ := store.NewStoreService(logger)
+
+	storeLoader, err := jobs.NewStoreLoader(appCfg.Jobs.StoreLoaderConfig, storeServ, csc, logger)
 	if err != nil {
 		logger.Error("error creating store loader", zap.Error(err), zap.Any("errorType", reflect.TypeOf(err)))
 	}
@@ -75,10 +74,16 @@ func main() {
 		panic(err)
 	}
 
+	servicePort := fmt.Sprintf(":%d", constants.SERVICE_PORT)
+	listener, err := net.Listen("tcp", servicePort)
+	if err != nil {
+		panic(err)
+	}
+
 	// start listening for rpc requests
 	go func() {
-		logger.Info("server will start listening for requests", zap.Int("port", constants.SERVICE_PORT))
-		if err := server.Serve(listener); err != nil {
+		logger.Info("server will start listening for requests", zap.String("port", listener.Addr().String()))
+		if err := server.Serve(listener); err != nil && !errors.Is(err, net.ErrClosed) {
 			logger.Error("server failed to start serving", zap.Error(err), zap.Any("errorType", reflect.TypeOf(err)))
 		}
 	}()
@@ -101,7 +106,7 @@ func main() {
 			logger.Error("error closing network listener", zap.Error(err), zap.Any("errorType", reflect.TypeOf(err)))
 		}
 		logger.Info("stopping server")
-		server.Stop()
+		server.GracefulStop()
 		cancel()
 	}()
 	<-ctx.Done()

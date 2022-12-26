@@ -2,13 +2,13 @@ package filestorage
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"testing"
 
 	"github.com/comfforts/comff-stores/pkg/logging"
-	"github.com/comfforts/comff-stores/pkg/utils/file"
+	fileUtils "github.com/comfforts/comff-stores/pkg/utils/file"
+	testUtils "github.com/comfforts/comff-stores/pkg/utils/test"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 )
@@ -44,7 +44,7 @@ func setupLocalTest(t *testing.T, testDir string) (
 ) {
 	t.Helper()
 
-	err := file.CreateDirectory(testDir)
+	err := fileUtils.CreateDirectory(testDir)
 	require.NoError(t, err)
 
 	logger := zaptest.NewLogger(t)
@@ -71,7 +71,7 @@ func testReadFileArray(t *testing.T, client *LocalStorageClient, testDir string)
 	}()
 
 	name := "data"
-	fPath, err := createJSONFile(testDir, name)
+	fPath, err := testUtils.CreateJSONFile(testDir, name)
 	require.NoError(t, err)
 
 	resultStream, err := client.ReadFileArray(ctx, cancel, fPath)
@@ -110,7 +110,7 @@ func testReadFileArrayMissingTokens(t *testing.T, client *LocalStorageClient, te
 	}()
 
 	name := "data_missing_tokens"
-	fPath, err := createSingleJSONFile(testDir, name)
+	fPath, err := testUtils.CreateSingleJSONFile(testDir, name)
 	require.NoError(t, err)
 
 	resultStream, err := client.ReadFileArray(ctx, cancel, fPath)
@@ -140,7 +140,7 @@ func testReadFileArrayMissingTokens(t *testing.T, client *LocalStorageClient, te
 
 func testCopy(t *testing.T, client *LocalStorageClient, testDir string) {
 	name := "test"
-	srcName, err := createJSONFile(testDir, name)
+	srcName, err := testUtils.CreateJSONFile(testDir, name)
 	require.NoError(t, err)
 
 	destName := fmt.Sprintf("%s/%s-copy.json", testDir, name)
@@ -153,7 +153,7 @@ func testCopy(t *testing.T, client *LocalStorageClient, testDir string) {
 
 func testCopyBuffer(t *testing.T, client *LocalStorageClient, testDir string) {
 	name := "test"
-	srcName, err := createJSONFile(testDir, name)
+	srcName, err := testUtils.CreateJSONFile(testDir, name)
 	require.NoError(t, err)
 
 	destName := fmt.Sprintf("%s/%s-copy-buf.json", testDir, name)
@@ -173,10 +173,10 @@ func testCopyBuffer(t *testing.T, client *LocalStorageClient, testDir string) {
 
 func testFileStats(t *testing.T, client *LocalStorageClient, testDir string) {
 	name := "test"
-	fPath, err := createJSONFile(testDir, name)
+	fPath, err := testUtils.CreateJSONFile(testDir, name)
 	require.NoError(t, err)
 
-	err = FileStats(fPath)
+	_, err = fileUtils.FileStats(fPath)
 	require.NoError(t, err)
 }
 
@@ -261,31 +261,3 @@ func testFileStats(t *testing.T, client *LocalStorageClient, testDir string) {
 // 		}
 // 	}()
 // }
-
-func createSingleJSONFile(dir, name string) (string, error) {
-	fPath := fmt.Sprintf("%s.json", name)
-	if dir != "" {
-		fPath = fmt.Sprintf("%s/%s", dir, fPath)
-	}
-	item := Result{
-		"city":      "Hong Kong",
-		"name":      "Plaza Hollywood",
-		"country":   "CN",
-		"longitude": 114.20169067382812,
-		"latitude":  22.340700149536133,
-		"store_id":  1,
-	}
-
-	file, err := os.Create(fPath)
-	if err != nil {
-		return "", err
-	}
-	defer file.Close()
-
-	encoder := json.NewEncoder(file)
-	err = encoder.Encode(item)
-	if err != nil {
-		return "", err
-	}
-	return fPath, nil
-}

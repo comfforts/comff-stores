@@ -2,11 +2,10 @@ package server
 
 import (
 	api "github.com/comfforts/comff-stores/api/v1"
-
-	"github.com/comfforts/comff-stores/pkg/services/store"
+	storeModels "github.com/comfforts/comff-stores/pkg/models/store"
 )
 
-func MapStoreModelToResponse(store *store.Store) *api.Store {
+func MapStoreModelToResponse(store *storeModels.Store) *api.Store {
 	return &api.Store{
 		Id:        store.ID,
 		Name:      store.Name,
@@ -19,7 +18,7 @@ func MapStoreModelToResponse(store *store.Store) *api.Store {
 	}
 }
 
-func MapStoreListToResponse(sts []*store.StoreGeo) []*api.StoreGeo {
+func MapStoreListToResponse(sts []*storeModels.StoreGeo) []*api.StoreGeo {
 	stores := []*api.StoreGeo{}
 
 	for _, st := range sts {
