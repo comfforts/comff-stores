@@ -12,11 +12,7 @@ COPY cmd/store/build/"$BUILD_OS"_"$BUILD_ARCH"/store ./
 COPY cmd/store/config.json ./
 COPY cmd/store/creds ./creds
 
-# RUN chown -R store /stores
-# RUN chown -R store ./creds/
-# RUN chown -R store ./config.json
-
-RUN chown -R store /stores ./creds ./config.json
+RUN chown -R store /stores
 
 USER store
 

@@ -3,6 +3,7 @@ package geocode
 import (
 	"context"
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/comfforts/comff-stores/pkg/config"
 	"github.com/comfforts/comff-stores/pkg/logging"
+	"github.com/comfforts/comff-stores/pkg/services/filestorage"
 )
 
 func TestGeocoder(t *testing.T) {
@@ -39,12 +41,19 @@ func setupTest(t *testing.T) (
 	appCfg, err := config.GetAppConfig(appLogger, "test-config.json")
 	require.NoError(t, err)
 
+	cscCfg := appCfg.Services.CloudStorageClientCfg
+	csc, err := filestorage.NewCloudStorageClient(appLogger, cscCfg)
+	require.NoError(t, err)
+
 	gscCfg := appCfg.Services.GeoCodeCfg
-	gsc, err := NewGeoCodeService(gscCfg, appLogger)
+	gsc, err := NewGeoCodeService(gscCfg, csc, appLogger)
 	require.NoError(t, err)
 
 	return gsc, func() {
 		t.Log(" TestGeocoder ended")
+
+		err := os.RemoveAll(gscCfg.DataPath)
+		require.NoError(t, err)
 	}
 }
 

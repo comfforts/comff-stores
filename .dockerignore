@@ -3,7 +3,8 @@ README.md
 .gitignore
 
 cmd/store/logs
-cmd/store/cache
+cmd/store/geo
+cmd/store/data
 cmd/client
 scripts
 

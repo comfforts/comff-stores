@@ -6,7 +6,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/patrickmn/go-cache"
@@ -16,6 +15,8 @@ import (
 	"github.com/comfforts/comff-stores/pkg/logging"
 	fileUtils "github.com/comfforts/comff-stores/pkg/utils/file"
 )
+
+const CACHE_FILE_NAME = "cache"
 
 const (
 	ERROR_SET_CACHE                string = "error adding key/value to cache"
@@ -51,6 +52,8 @@ type CacheService struct {
 	cache     *cache.Cache
 	logger    *logging.AppLogger
 	marshalFn MarshalFn
+	loadedAt  int64
+	updatedAt int64
 }
 
 func NewCacheService(name string, logger *logging.AppLogger, marshalFn MarshalFn) (*CacheService, error) {
@@ -77,13 +80,26 @@ func NewCacheService(name string, logger *logging.AppLogger, marshalFn MarshalFn
 	return cacheService, nil
 }
 
+func (c *CacheService) SetLoadedAt(at int64) {
+	c.loadedAt = at
+	c.updatedAt = at
+}
+
+func (c *CacheService) LoadedAt() int64 {
+	return c.loadedAt
+}
+
+func (c *CacheService) UpdatedAt() int64 {
+	return c.updatedAt
+}
+
 func (c *CacheService) Set(key string, value interface{}, d time.Duration) error {
 	err := c.cache.Add(key, value, d)
 	if err != nil {
 		c.logger.Error(ERROR_SET_CACHE, zap.Error(err), zap.String("cacheName", c.name))
 		return errors.WrapError(err, ERROR_SET_CACHE)
 	}
-	c.logger.Info(VALUE_ADDED, zap.String("key", key), zap.String("cacheName", c.name))
+	c.logger.Debug(VALUE_ADDED, zap.String("key", key), zap.String("cacheName", c.name))
 	return nil
 }
 
@@ -93,18 +109,20 @@ func (c *CacheService) Get(key string) (interface{}, time.Time, error) {
 		c.logger.Error(ERROR_GET_CACHE, zap.Error(ErrGetCache), zap.String("cacheName", c.name))
 		return nil, time.Time{}, ErrGetCache
 	}
-	c.logger.Info(RETURNING_VALUE, zap.String("key", key), zap.String("cacheName", c.name))
+	c.updatedAt = time.Now().Unix()
+	c.logger.Debug(RETURNING_VALUE, zap.String("key", key), zap.String("cacheName", c.name))
 	return val, exp, nil
 }
 
 func (c *CacheService) Delete(key string) {
 	c.cache.Delete(key)
-	c.logger.Info(KEY_DELETED, zap.String("key", key), zap.String("cacheName", c.name))
+	c.updatedAt = time.Now().Unix()
+	c.logger.Debug(KEY_DELETED, zap.String("key", key), zap.String("cacheName", c.name))
 }
 
 func (c *CacheService) DeleteExpired() {
 	c.cache.DeleteExpired()
-	c.logger.Info(DELETED_EXPIRED, zap.String("cacheName", c.name))
+	c.logger.Debug(DELETED_EXPIRED, zap.String("cacheName", c.name))
 }
 
 func (c *CacheService) ItemCount() int {
@@ -125,7 +143,7 @@ func (c *CacheService) Clear() {
 }
 
 func (c *CacheService) SaveFile() error {
-	filePath := filepath.Join("cache", fmt.Sprintf("%s.json", strings.ToLower(c.name)))
+	filePath := filepath.Join(c.name, fmt.Sprintf("%s.json", CACHE_FILE_NAME))
 	c.logger.Info("saving cache file", zap.String("filePath", filePath))
 
 	err := fileUtils.CreateDirectory(filePath)
@@ -153,7 +171,7 @@ func (c *CacheService) SaveFile() error {
 }
 
 func (c *CacheService) LoadFile() error {
-	filePath := filepath.Join("cache", fmt.Sprintf("%s.json", strings.ToLower(c.name)))
+	filePath := filepath.Join(c.name, fmt.Sprintf("%s.json", CACHE_FILE_NAME))
 	c.logger.Info("loading cache file", zap.String("filePath", filePath))
 	file, err := os.Open(filePath)
 	if err != nil {
@@ -185,7 +203,7 @@ func (c *CacheService) Load(r io.Reader) error {
 					if err != nil {
 						c.logger.Error(ERROR_SET_CACHE, zap.Error(err), zap.String("cacheName", c.name))
 					} else {
-						c.logger.Info("cache item loaded", zap.String("cacheName", c.name), zap.String("key", k), zap.Any("value", obj), zap.Any("exp", v.Expiration))
+						c.logger.Debug("cache item loaded", zap.String("cacheName", c.name), zap.String("key", k), zap.Any("value", obj), zap.Any("exp", v.Expiration))
 					}
 				}
 			}

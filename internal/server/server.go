@@ -14,6 +14,7 @@ import (
 
 	"github.com/comfforts/comff-stores/pkg/jobs"
 	"github.com/comfforts/comff-stores/pkg/logging"
+	storeModels "github.com/comfforts/comff-stores/pkg/models/store"
 	"github.com/comfforts/comff-stores/pkg/services/geocode"
 	"github.com/comfforts/comff-stores/pkg/services/store"
 )
@@ -56,7 +57,7 @@ func NewGrpcServer(config *Config, opts ...grpc.ServerOption) (*grpc.Server, err
 }
 
 func (s *grpcServer) AddStore(ctx context.Context, req *api.AddStoreRequest) (*api.AddStoreResponse, error) {
-	store, err := s.StoreService.AddStore(ctx, &store.Store{
+	store, err := s.StoreService.AddStore(ctx, &storeModels.Store{
 		Name:      req.Name,
 		Org:       req.Org,
 		Longitude: float64(req.Longitude),
