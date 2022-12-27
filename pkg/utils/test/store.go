@@ -40,13 +40,13 @@ func CreateJSONFile(dir, name string) (string, error) {
 		},
 	}
 
-	file, err := os.Create(fPath)
+	f, err := os.Create(fPath)
 	if err != nil {
 		return "", err
 	}
-	defer file.Close()
+	defer f.Close()
 
-	encoder := json.NewEncoder(file)
+	encoder := json.NewEncoder(f)
 	err = encoder.Encode(items)
 	if err != nil {
 		return "", err
@@ -68,13 +68,13 @@ func CreateSingleJSONFile(dir, name string) (string, error) {
 		"store_id":  1,
 	}
 
-	file, err := os.Create(fPath)
+	f, err := os.Create(fPath)
 	if err != nil {
 		return "", err
 	}
-	defer file.Close()
+	defer f.Close()
 
-	encoder := json.NewEncoder(file)
+	encoder := json.NewEncoder(f)
 	err = encoder.Encode(item)
 	if err != nil {
 		return "", err

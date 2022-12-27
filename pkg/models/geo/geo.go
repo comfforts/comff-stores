@@ -3,6 +3,7 @@ package geo
 import "time"
 
 const (
+	OneYear       = 365 * 24 * 30 * time.Hour
 	ThirtyDays    = 24 * 30 * time.Hour
 	OneDay        = 24 * time.Hour
 	FiveHours     = 5 * time.Hour

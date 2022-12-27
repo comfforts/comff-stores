@@ -6,4 +6,4 @@ BASEDIR=$(dirname "$0")
 cd ${BASEDIR}/../
 echo "running comff-stores:${CURR_SHA}"
 
-docker run -p 50051:50051 --rm comff-stores:${CURR_SHA}
+docker run --rm -p 50051:50051 --name comff-stores comff-stores:${CURR_SHA}
