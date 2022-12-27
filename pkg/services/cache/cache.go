@@ -93,6 +93,10 @@ func (c *CacheService) UpdatedAt() int64 {
 	return c.updatedAt
 }
 
+func (c *CacheService) Updated() bool {
+	return c.updatedAt > c.loadedAt
+}
+
 func (c *CacheService) Set(key string, value interface{}, d time.Duration) error {
 	err := c.cache.Add(key, value, d)
 	if err != nil {
@@ -209,5 +213,8 @@ func (c *CacheService) Load(r io.Reader) error {
 			}
 		}
 	}
+	now := time.Now().Unix()
+	c.loadedAt = now
+	c.updatedAt = now
 	return err
 }

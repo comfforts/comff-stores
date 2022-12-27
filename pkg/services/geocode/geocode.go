@@ -133,7 +133,7 @@ func (g *GeoCodeService) Geocode(ctx context.Context, postalCode, countryCode st
 
 func (g *GeoCodeService) Clear() {
 	g.logger.Info("cleaning up geo code data structures")
-	if g.config.Cached {
+	if g.config.Cached && g.cache.Updated() {
 		err := g.cache.SaveFile()
 		if err != nil {
 			g.logger.Error("error saving geocoder cache", zap.Error(err))
@@ -165,7 +165,7 @@ func (g *GeoCodeService) getFromCache(postalCode string) (*geohash.Point, time.T
 }
 
 func (g *GeoCodeService) setInCache(postalCode string, point geohash.Point) error {
-	err := g.cache.Set(postalCode, point, geoModels.ThirtyDays)
+	err := g.cache.Set(postalCode, point, geoModels.OneYear)
 	if err != nil {
 		g.logger.Error(cache.ERROR_SET_CACHE, zap.Error(err), zap.String("postalCode", postalCode))
 		return err

@@ -180,7 +180,7 @@ func (ss *StoreService) getStoreIdsForLatLong(ctx context.Context, lat, long flo
 	ids, ok := ss.hashMap[hashKey]
 	if !ok || len(ids) < 1 {
 		ss.logger.Error(errors.ERROR_NO_STORE_FOUND, zap.Float64("latitude", lat), zap.Float64("longitude", long))
-		return nil, errors.WrapError(err, errors.ERROR_NO_STORE_FOUND)
+		return nil, errors.NewAppError(errors.ERROR_NO_STORE_FOUND)
 	}
 	return ids, nil
 }

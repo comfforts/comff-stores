@@ -1,4 +1,4 @@
-FROM golang:1.19-alpine3.17 as builder
+FROM alpine:latest as builder
 
 ARG BUILD_OS=linux
 ARG BUILD_ARCH=arm64
