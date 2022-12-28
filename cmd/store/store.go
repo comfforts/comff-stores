@@ -13,7 +13,6 @@ import (
 
 	"github.com/comfforts/comff-stores/internal/server"
 	appConfig "github.com/comfforts/comff-stores/pkg/config"
-	"github.com/comfforts/comff-stores/pkg/constants"
 	"github.com/comfforts/comff-stores/pkg/jobs"
 	"github.com/comfforts/comff-stores/pkg/logging"
 	"github.com/comfforts/comff-stores/pkg/services/filestorage"
@@ -74,7 +73,7 @@ func main() {
 		panic(err)
 	}
 
-	servicePort := fmt.Sprintf(":%d", constants.SERVICE_PORT)
+	servicePort := fmt.Sprintf(":%d", appCfg.ServicePort)
 	listener, err := net.Listen("tcp", servicePort)
 	if err != nil {
 		panic(err)

@@ -1,3 +1,4 @@
+.DS_Store
 cmd/store/__debug_bin
 cmd/store/config.json
 cmd/store/creds
