@@ -11,9 +11,10 @@ import (
 
 	api "github.com/comfforts/comff-stores/api/v1"
 
-	"github.com/comfforts/comff-stores/pkg/constants"
 	"github.com/comfforts/comff-stores/pkg/logging"
 )
+
+const SERVICE_PORT = 50051
 
 func main() {
 	// initialize app logger instance
@@ -23,7 +24,7 @@ func main() {
 	}
 	logger := logging.NewAppLogger(nil, logCfg)
 
-	servicePort := fmt.Sprintf(":%d", constants.SERVICE_PORT)
+	servicePort := fmt.Sprintf(":%d", SERVICE_PORT)
 	conn, err := grpc.Dial(servicePort, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		logger.Fatal("client failed to connect", zap.Error(err))

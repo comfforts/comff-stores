@@ -5,11 +5,13 @@ CURR_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 BASEDIR=$(dirname "$0")
 echo $BASEDIR
 
-BLD_OS=$(go env GOOS)
-echo $BLD_OS
-BLD_ARCH=$(go env GOARCH)
-echo $BLD_ARCH
+LOCAL_OS=$(go env GOOS)
+LOCAL_ARCH=$(go env GOARCH)
+echo "local OS: ${LOCAL_OS} for local arch: ${LOCAL_ARCH}"
+
+BUILD_OS="linux"
+BUILD_ARCH=$LOCAL_ARCH
 
 cd ${BASEDIR}/../
-echo "building docker image for rev: ${CURR_SHA} for branch: ${CURR_BRANCH}"
-docker build --progress=plain --build-arg BUILD_OS=linux --build-arg BUILD_ARCH=arm64 -t comff-stores:${CURR_SHA} -f docker/Dockerfile .
+echo "building docker image for rev: ${CURR_SHA}, branch: ${CURR_BRANCH}, arch: ${BUILD_OS}/${BUILD_ARCH}"
+docker build --progress=plain --build-arg BUILD_OS=${BUILD_OS} --build-arg BUILD_ARCH=${BUILD_ARCH} -t comff-stores:${CURR_SHA} -f docker/Dockerfile .
