@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/comfforts/comff-stores/internal/config"
 	"github.com/comfforts/comff-stores/internal/server"
 	appConfig "github.com/comfforts/comff-stores/pkg/config"
 	"github.com/comfforts/comff-stores/pkg/jobs"
@@ -20,6 +21,8 @@ import (
 	"github.com/comfforts/comff-stores/pkg/services/store"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 func main() {
@@ -54,11 +57,13 @@ func main() {
 	// initialize store service instance
 	storeServ := store.NewStoreService(logger)
 
+	// initialize store loader instance
 	storeLoader, err := jobs.NewStoreLoader(appCfg.Jobs.StoreLoaderConfig, storeServ, csc, logger)
 	if err != nil {
 		logger.Error("error creating store loader", zap.Error(err), zap.Any("errorType", reflect.TypeOf(err)))
 	}
 
+	// setup mutual TLS config
 	servCfg := &server.Config{
 		StoreService: storeServ,
 		GeoService:   geoServ,
@@ -66,16 +71,29 @@ func main() {
 		Logger:       logger,
 	}
 
-	// initialize grpc server instance
-	server, err := server.NewGrpcServer(servCfg)
-	if err != nil {
-		logger.Error("error starting server", zap.Error(err))
-		panic(err)
-	}
-
 	servicePort := fmt.Sprintf(":%d", appCfg.ServicePort)
 	listener, err := net.Listen("tcp", servicePort)
 	if err != nil {
+		panic(err)
+	}
+
+	srvTLSConfig, err := config.SetupTLSConfig(config.TLSConfig{
+		CertFile:      config.ServerCertFile,
+		KeyFile:       config.ServerKeyFile,
+		CAFile:        config.CAFile,
+		ServerAddress: listener.Addr().String(),
+		Server:        true,
+	})
+	if err != nil {
+		logger.Error("error setting up TLS config", zap.Error(err), zap.Any("errorType", reflect.TypeOf(err)))
+	}
+	srvCreds := credentials.NewTLS(srvTLSConfig)
+
+	// initialize grpc server instance
+	server, err := server.NewGRPCServer(servCfg, grpc.Creds(srvCreds))
+	// server, err := server.NewGRPCServer(servCfg)
+	if err != nil {
+		logger.Error("error starting server", zap.Error(err))
 		panic(err)
 	}
 

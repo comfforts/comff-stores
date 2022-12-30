@@ -6,12 +6,13 @@ import (
 	"testing"
 
 	api "github.com/comfforts/comff-stores/api/v1"
+	"github.com/comfforts/comff-stores/internal/config"
 	"github.com/comfforts/comff-stores/pkg/logging"
 	"github.com/comfforts/comff-stores/pkg/services/store"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/credentials"
 )
 
 func TestServer(t *testing.T) {
@@ -37,11 +38,29 @@ func setupTest(t *testing.T, fn func(*Config)) (
 ) {
 	t.Helper()
 
-	l, err := net.Listen("tcp", "127.0.0.1:0")
+	l, err := net.Listen("tcp", "192.168.68.100:50055")
 	require.NoError(t, err)
 
-	cc, err := grpc.Dial(l.Addr().String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
-	require.NoError(t, err)
+	// grpc client
+	newClient := func(crtPath, keyPath string) (*grpc.ClientConn, api.StoresClient, []grpc.DialOption) {
+		tlsConfig, err := config.SetupTLSConfig(config.TLSConfig{
+			CertFile: crtPath,
+			KeyFile:  keyPath,
+			CAFile:   config.CAFile,
+			Server:   false,
+		})
+		require.NoError(t, err)
+
+		tlsCreds := credentials.NewTLS(tlsConfig)
+		opts := []grpc.DialOption{grpc.WithTransportCredentials(tlsCreds)}
+		addr := l.Addr().String()
+		conn, err := grpc.Dial(addr, opts...)
+		require.NoError(t, err)
+		client = api.NewStoresClient(conn)
+		return conn, client, opts
+	}
+
+	cc, client, _ := newClient(config.ClientCertFile, config.ClientKeyFile)
 
 	logger := zaptest.NewLogger(t)
 	appLogger := logging.NewAppLogger(logger, nil)
@@ -53,7 +72,19 @@ func setupTest(t *testing.T, fn func(*Config)) (
 	if fn != nil {
 		fn(cfg)
 	}
-	server, err := NewGrpcServer(cfg)
+
+	// grpc server
+	srvTLSConfig, err := config.SetupTLSConfig(config.TLSConfig{
+		CertFile:      config.ServerCertFile,
+		KeyFile:       config.ServerKeyFile,
+		CAFile:        config.CAFile,
+		ServerAddress: l.Addr().String(),
+		Server:        true,
+	})
+	require.NoError(t, err)
+	srvCreds := credentials.NewTLS(srvTLSConfig)
+
+	server, err := NewGRPCServer(cfg, grpc.Creds(srvCreds))
 	require.NoError(t, err)
 
 	go func() {
