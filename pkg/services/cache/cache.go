@@ -85,15 +85,8 @@ func (c *CacheService) SetLoadedAt(at int64) {
 	c.updatedAt = at
 }
 
-func (c *CacheService) LoadedAt() int64 {
-	return c.loadedAt
-}
-
-func (c *CacheService) UpdatedAt() int64 {
-	return c.updatedAt
-}
-
 func (c *CacheService) Updated() bool {
+	c.logger.Info("cache file", zap.Int64("loadedAt", c.loadedAt), zap.Int64("updatedAt", c.updatedAt))
 	return c.updatedAt > c.loadedAt
 }
 
@@ -188,7 +181,6 @@ func (c *CacheService) LoadFile() error {
 		c.logger.Error(ERROR_LOADING_CACHE_FILE, zap.Error(err), zap.String("filePath", filePath))
 		return err
 	}
-	c.logger.Info("cache file loaded", zap.String("filePath", filePath))
 	return nil
 }
 
@@ -213,8 +205,7 @@ func (c *CacheService) Load(r io.Reader) error {
 			}
 		}
 	}
-	now := time.Now().Unix()
-	c.loadedAt = now
-	c.updatedAt = now
+	c.SetLoadedAt(time.Now().Unix())
+	c.logger.Info("cache file loaded", zap.Int64("loadedAt", c.loadedAt), zap.Int64("updatedAt", c.updatedAt))
 	return err
 }

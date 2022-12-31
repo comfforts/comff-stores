@@ -11,6 +11,8 @@ RUN adduser --system --uid 1001 store
 COPY cmd/store/build/"$BUILD_OS"_"$BUILD_ARCH"/store ./
 COPY cmd/store/config.json ./
 COPY cmd/store/creds ./creds
+COPY cmd/store/certs ./certs
+COPY cmd/store/policies ./policies
 
 RUN chown -R store /stores
 

@@ -4,6 +4,8 @@ go 1.19
 
 require (
 	cloud.google.com/go/storage v1.28.1
+	github.com/casbin/casbin v1.9.1
+	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/stretchr/testify v1.8.1
 	gitlab.com/xerra/common/vincenty v0.0.0-20200407041038-0fe7b2620a3b
@@ -19,6 +21,7 @@ require (
 	cloud.google.com/go/compute v1.12.1 // indirect
 	cloud.google.com/go/compute/metadata v0.2.1 // indirect
 	cloud.google.com/go/iam v0.7.0 // indirect
+	github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible // indirect
 	github.com/benbjohnson/clock v1.1.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
