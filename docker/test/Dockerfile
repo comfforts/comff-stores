@@ -1,5 +1,24 @@
-FROM golang:1.19-alpine3.17
+FROM alpine:latest as builder
+
 ARG BUILD_OS=linux
 ARG BUILD_ARCH=arm64
-RUN echo "   Build ENV: $BUILD_OS/$BUILD_ARCH"
-CMD  ["env"]
+
+WORKDIR /stores
+
+RUN addgroup --system --gid 1001 comfforts
+RUN adduser --system --uid 1001 store
+
+COPY cmd/store/build/"$BUILD_OS"_"$BUILD_ARCH"/store ./
+COPY cmd/store/config.json ./
+COPY cmd/store/creds ./creds
+COPY certs ./certs
+COPY policies ./policies
+
+RUN chown -R store /stores
+
+USER store
+
+EXPOSE 50051
+ENV PORT 50051
+
+CMD ["ls", "-a"]

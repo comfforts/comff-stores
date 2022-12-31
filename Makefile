@@ -44,3 +44,13 @@ run-docker:
 	@echo "running docker image build for ${HEAD}"
 	scripts/run-docker.sh
 
+.PHONY: build-docker-test
+build-docker-test:
+	@echo "building docker image for ${HEAD}"
+	scripts/build-test.sh
+
+.PHONY: run-docker-test
+run-docker-test:
+	@echo "running docker image build for ${HEAD}"
+	scripts/run-test.sh
+

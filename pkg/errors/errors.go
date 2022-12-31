@@ -33,7 +33,8 @@ type AppError struct {
 	StackTrace string
 }
 
-func NewAppError(errMsg string) AppError {
+func NewAppError(errMsg string, msgArgs ...interface{}) AppError {
+	errMsg = fmt.Sprintf(errMsg, msgArgs...)
 	return AppError{
 		Inner:      errors.New(errMsg),
 		Message:    errMsg,

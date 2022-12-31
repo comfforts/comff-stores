@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"net"
+	"path/filepath"
 	"testing"
 
 	api "github.com/comfforts/comff-stores/api/v1"
@@ -46,12 +47,17 @@ func setupTest(t *testing.T, fn func(*Config)) (
 	l, err := net.Listen("tcp", "192.168.68.100:50055")
 	require.NoError(t, err)
 
+	caFilePath := filepath.Join("../../cmd/store", config.CertFile(config.CAFile))
+
 	// grpc client
 	newClient := func(crtPath, keyPath string) (*grpc.ClientConn, api.StoresClient, []grpc.DialOption) {
+		certFilePath := filepath.Join("../../cmd/store", config.CertFile(crtPath))
+		keyFilePath := filepath.Join("../../cmd/store", config.CertFile(keyPath))
+
 		tlsConfig, err := config.SetupTLSConfig(config.TLSConfig{
-			CertFile: crtPath,
-			KeyFile:  keyPath,
-			CAFile:   config.CAFile,
+			CertFile: certFilePath,
+			KeyFile:  keyFilePath,
+			CAFile:   caFilePath,
 			Server:   false,
 		})
 		require.NoError(t, err)
@@ -72,7 +78,11 @@ func setupTest(t *testing.T, fn func(*Config)) (
 	appLogger := logging.NewAppLogger(logger, nil)
 	css := store.NewStoreService(appLogger)
 
-	authorizer := auth.NewAuthorizer(config.ACLModelFile, config.ACLPolicyFile, appLogger)
+	modelFilePath := filepath.Join("../../cmd/store", config.PolicyFile(config.ACLModelFile))
+	policyFilePath := filepath.Join("../../cmd/store", config.PolicyFile(config.ACLPolicyFile))
+
+	authorizer, err := auth.NewAuthorizer(modelFilePath, policyFilePath, appLogger)
+	require.NoError(t, err)
 	cfg = &Config{
 		StoreService: css,
 		Authorizer:   authorizer,
@@ -81,17 +91,20 @@ func setupTest(t *testing.T, fn func(*Config)) (
 		fn(cfg)
 	}
 
-	// grpc server
+	// TLS config
+	serCertFilePath := filepath.Join("../../cmd/store", config.CertFile(config.ServerCertFile))
+	serKeyFilePath := filepath.Join("../../cmd/store", config.CertFile(config.ServerKeyFile))
 	srvTLSConfig, err := config.SetupTLSConfig(config.TLSConfig{
-		CertFile:      config.ServerCertFile,
-		KeyFile:       config.ServerKeyFile,
-		CAFile:        config.CAFile,
+		CertFile:      serCertFilePath,
+		KeyFile:       serKeyFilePath,
+		CAFile:        caFilePath,
 		ServerAddress: l.Addr().String(),
 		Server:        true,
 	})
 	require.NoError(t, err)
 	srvCreds := credentials.NewTLS(srvTLSConfig)
 
+	// grpc server
 	server, err := NewGRPCServer(cfg, grpc.Creds(srvCreds))
 	require.NoError(t, err)
 

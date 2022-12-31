@@ -1,6 +1,7 @@
 package file
 
 import (
+	"fmt"
 	"io/fs"
 	"os"
 	"path"
@@ -96,10 +97,10 @@ func HomeDir() string {
 	home := rootDir()
 	base := filepath.Base(home)
 	if base == string(Internal) {
-		home = filepath.Join(home, "../")
+		home = filepath.Join("..")
 	} else if base == string(Utils) {
-		home = filepath.Join(home, "../../")
+		home = filepath.Join("../..")
 	}
-
+	fmt.Printf("    base: %s, home: %s\n", base, home)
 	return home
 }

@@ -27,9 +27,9 @@ func main() {
 	logger := logging.NewAppLogger(nil, logCfg)
 
 	tlsConfig, err := config.SetupTLSConfig(config.TLSConfig{
-		CertFile: config.ClientCertFile,
-		KeyFile:  config.ClientKeyFile,
-		CAFile:   config.CAFile,
+		CertFile: config.CertFile(config.ClientCertFile),
+		KeyFile:  config.CertFile(config.ClientKeyFile),
+		CAFile:   config.CertFile(config.CAFile),
 		Server:   false,
 	})
 	if err != nil {

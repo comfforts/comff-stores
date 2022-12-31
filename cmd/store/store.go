@@ -29,45 +29,50 @@ import (
 func main() {
 	ctx := context.Background()
 
-	// initialize app logger instance
+	fmt.Println("  initializing app logger instance")
 	logCfg := &logging.AppLoggerConfig{
 		FilePath: "logs/app.log",
 		Level:    zapcore.DebugLevel,
 	}
 	logger := logging.NewAppLogger(nil, logCfg)
 
-	// create app config
+	logger.Info("creating app configuration")
 	appCfg, err := appConfig.GetAppConfig(logger, "")
 	if err != nil {
 		logger.Fatal("unable to setup config", zap.Error(err))
 		return
 	}
 
+	logger.Info("creating cloud storage client")
 	csc, err := filestorage.NewCloudStorageClient(logger, appCfg.Services.CloudStorageClientCfg)
 	if err != nil {
 		logger.Error("error creating cloud storage client", zap.Error(err))
 	}
 
-	// create geo coding service instance
+	logger.Info("creating geo coding service instance")
 	geoServ, err := geocode.NewGeoCodeService(appCfg.Services.GeoCodeCfg, csc, logger)
 	if err != nil {
 		logger.Fatal("error initializing maps client", zap.Error(err))
 		return
 	}
 
-	// initialize store service instance
+	logger.Info("initializing store service instance")
 	storeServ := store.NewStoreService(logger)
 
-	// initialize store loader instance
+	logger.Info("initializing store loader instance")
 	storeLoader, err := jobs.NewStoreLoader(appCfg.Jobs.StoreLoaderConfig, storeServ, csc, logger)
 	if err != nil {
 		logger.Error("error creating store loader", zap.Error(err), zap.Any("errorType", reflect.TypeOf(err)))
 	}
 
-	// initialize authorizer instance
-	authorizer := auth.NewAuthorizer(config.ACLModelFile, config.ACLPolicyFile, logger)
+	logger.Info("initializing authorizer instance")
+	authorizer, err := auth.NewAuthorizer(config.PolicyFile(config.ACLModelFile), config.PolicyFile(config.ACLPolicyFile), logger)
+	if err != nil {
+		logger.Error("error initializing authorizer instance", zap.Error(err))
+		panic(err)
+	}
 
-	// setup mutual TLS config
+	logger.Info("setting up server config")
 	servCfg := &server.Config{
 		StoreService: storeServ,
 		GeoService:   geoServ,
@@ -76,33 +81,35 @@ func main() {
 		Logger:       logger,
 	}
 
+	logger.Info("opening a tcp socket address")
 	servicePort := fmt.Sprintf(":%d", appCfg.ServicePort)
 	listener, err := net.Listen("tcp", servicePort)
 	if err != nil {
+		logger.Error("error opening a tcp socket address", zap.Error(err))
 		panic(err)
 	}
 
+	logger.Info("setting up server TLS config")
 	srvTLSConfig, err := config.SetupTLSConfig(config.TLSConfig{
-		CertFile:      config.ServerCertFile,
-		KeyFile:       config.ServerKeyFile,
-		CAFile:        config.CAFile,
+		CertFile:      config.CertFile(config.ServerCertFile),
+		KeyFile:       config.CertFile(config.ServerKeyFile),
+		CAFile:        config.CertFile(config.CAFile),
 		ServerAddress: listener.Addr().String(),
 		Server:        true,
 	})
 	if err != nil {
-		logger.Error("error setting up TLS config", zap.Error(err), zap.Any("errorType", reflect.TypeOf(err)))
+		logger.Error("error setting up TLS config", zap.Error(err))
+		panic(err)
 	}
 	srvCreds := credentials.NewTLS(srvTLSConfig)
 
-	// initialize grpc server instance
+	logger.Info("initializing grpc server instance")
 	server, err := server.NewGRPCServer(servCfg, grpc.Creds(srvCreds))
-	// server, err := server.NewGRPCServer(servCfg)
 	if err != nil {
 		logger.Error("error starting server", zap.Error(err))
 		panic(err)
 	}
 
-	// start listening for rpc requests
 	go func() {
 		logger.Info("server will start listening for requests", zap.String("port", listener.Addr().String()))
 		if err := server.Serve(listener); err != nil && !errors.Is(err, net.ErrClosed) {
@@ -110,7 +117,7 @@ func main() {
 		}
 	}()
 
-	// Wait for interrupt signal to gracefully shutdown the server
+	logger.Info("waiting for interrupt signal to gracefully shutdown the server")
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit

@@ -1,13 +1,16 @@
 .DS_Store
-.certs
-.policies
+certs
+policies
 
+cmd/store/certs
 cmd/store/creds
+cmd/store/policies
 cmd/store/config.json
 cmd/store/data
 cmd/store/logs
 cmd/store/geo
 
+cmd/client/certs
 cmd/client/logs
 
 pkg/jobs/creds

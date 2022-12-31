@@ -1,3 +1,3 @@
 #!/bin/bash
 
-docker run --rm comff-stores:test
+docker run --rm --name comff-stores-test comff-stores:test
