@@ -19,13 +19,7 @@ build-proto:
 .PHONY: run-test
 run-test:
 	@echo "testing latest ${HEAD}"
-	cd pkg/utils/geohash && go test --race -v .
-	cd pkg/services/store && go test --race -v .
-	cd pkg/services/geocode && go test --race -v .
-	cd pkg/services/filestorage && go test --race -v .
-	cd pkg/jobs && go test --race -v .
-	cd pkg/config && go test --race -v .
-	cd internal/server && go test --race -v .
+	go test --race -v ./...
 
 .PHONY: start-server
 start-server:

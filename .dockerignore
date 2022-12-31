@@ -1,4 +1,6 @@
 .vscode
+.certs
+.policies
 README.md
 .gitignore
 

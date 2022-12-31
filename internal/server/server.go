@@ -7,10 +7,15 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/status"
 
 	api "github.com/comfforts/comff-stores/api/v1"
+
+	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	grpc_auth "github.com/grpc-ecosystem/go-grpc-middleware/auth"
 
 	"github.com/comfforts/comff-stores/pkg/jobs"
 	"github.com/comfforts/comff-stores/pkg/logging"
@@ -21,10 +26,31 @@ import (
 
 var _ api.StoresServer = (*grpcServer)(nil)
 
+const (
+	objectWildcard = "*"
+	addAction      = "add"
+	getAction      = "get"
+	statsAction    = "stats"
+	searchAction   = "search"
+	uploadAction   = "upload"
+	locateAction   = "locate"
+)
+
+type subjectContextKey struct{}
+
+func subject(ctx context.Context) string {
+	return ctx.Value(subjectContextKey{}).(string)
+}
+
+type Authorizer interface {
+	Authorize(subject, object, action string) error
+}
+
 type Config struct {
 	StoreService *store.StoreService
 	GeoService   *geocode.GeoCodeService
 	StoreLoader  *jobs.StoreLoader
+	Authorizer   Authorizer
 	Logger       *logging.AppLogger
 }
 
@@ -41,6 +67,10 @@ func newGrpcServer(config *Config) (srv *grpcServer, err error) {
 }
 
 func NewGRPCServer(config *Config, opts ...grpc.ServerOption) (*grpc.Server, error) {
+	opts = append(opts, grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
+		grpc_auth.UnaryServerInterceptor(authenticate),
+	)))
+
 	gsrv := grpc.NewServer(opts...)
 	srv, err := newGrpcServer(config)
 	if err != nil {
@@ -57,6 +87,14 @@ func NewGRPCServer(config *Config, opts ...grpc.ServerOption) (*grpc.Server, err
 }
 
 func (s *grpcServer) AddStore(ctx context.Context, req *api.AddStoreRequest) (*api.AddStoreResponse, error) {
+	if err := s.Authorizer.Authorize(
+		subject(ctx),
+		objectWildcard,
+		addAction,
+	); err != nil {
+		return nil, err
+	}
+
 	store, err := s.StoreService.AddStore(ctx, &storeModels.Store{
 		Name:      req.Name,
 		Org:       req.Org,
@@ -82,6 +120,14 @@ func (s *grpcServer) AddStore(ctx context.Context, req *api.AddStoreRequest) (*a
 }
 
 func (s *grpcServer) GetStore(ctx context.Context, req *api.GetStoreRequest) (*api.GetStoreResponse, error) {
+	if err := s.Authorizer.Authorize(
+		subject(ctx),
+		objectWildcard,
+		getAction,
+	); err != nil {
+		return nil, err
+	}
+
 	store, err := s.StoreService.GetStore(ctx, req.Id)
 	if err != nil {
 		s.Logger.Error("store not found", zap.Error(err), zap.String("id", req.Id))
@@ -94,6 +140,14 @@ func (s *grpcServer) GetStore(ctx context.Context, req *api.GetStoreRequest) (*a
 }
 
 func (s *grpcServer) GetStats(ctx context.Context, req *api.StatsRequest) (*api.StatsResponse, error) {
+	if err := s.Authorizer.Authorize(
+		subject(ctx),
+		objectWildcard,
+		getAction,
+	); err != nil {
+		return nil, err
+	}
+
 	stats := s.StoreService.GetStoreStats()
 	return &api.StatsResponse{
 		Count:     uint32(stats.Count),
@@ -103,6 +157,14 @@ func (s *grpcServer) GetStats(ctx context.Context, req *api.StatsRequest) (*api.
 }
 
 func (s *grpcServer) SearchStore(ctx context.Context, req *api.SearchStoreRequest) (*api.SearchStoreResponse, error) {
+	if err := s.Authorizer.Authorize(
+		subject(ctx),
+		objectWildcard,
+		getAction,
+	); err != nil {
+		return nil, err
+	}
+
 	if (req.Latitude == 0 || req.Longitude == 0) && req.PostalCode == "" {
 		st := status.New(codes.NotFound, "missing required search params")
 		s.Logger.Error("missing required search params")
@@ -137,6 +199,14 @@ func (s *grpcServer) SearchStore(ctx context.Context, req *api.SearchStoreReques
 }
 
 func (s *grpcServer) GeoLocate(ctx context.Context, req *api.GeoLocationRequest) (*api.GeoLocationResponse, error) {
+	if err := s.Authorizer.Authorize(
+		subject(ctx),
+		objectWildcard,
+		getAction,
+	); err != nil {
+		return nil, err
+	}
+
 	point, err := s.GeoService.Geocode(ctx, req.PostalCode, "US")
 	if err != nil {
 		s.Logger.Error("error geocoding postalcode", zap.Error(err), zap.String("postalcode", req.PostalCode))
@@ -168,4 +238,24 @@ func (s *grpcServer) StoreUpload(ctx context.Context, req *api.StoreUploadReques
 	return &api.StoreUploadResponse{
 		Ok: true,
 	}, nil
+}
+
+func authenticate(ctx context.Context) (context.Context, error) {
+	peer, ok := peer.FromContext(ctx)
+	if !ok {
+		return ctx, status.New(
+			codes.Unknown,
+			"couldn't find peer info",
+		).Err()
+	}
+
+	if peer.AuthInfo == nil {
+		return context.WithValue(ctx, subjectContextKey{}, ""), nil
+	}
+
+	tlsInfo := peer.AuthInfo.(credentials.TLSInfo)
+	subject := tlsInfo.State.VerifiedChains[0][0].Subject.CommonName
+	ctx = context.WithValue(ctx, subjectContextKey{}, subject)
+
+	return ctx, nil
 }

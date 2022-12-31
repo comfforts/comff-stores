@@ -2,36 +2,50 @@ package config
 
 import (
 	"os"
-	"path"
 	"path/filepath"
-	"runtime"
+
+	fileUtils "github.com/comfforts/comff-stores/pkg/utils/file"
 )
 
 var (
-	CAFile         = configFile("ca.pem")
-	ServerCertFile = configFile("server.pem")
-	ServerKeyFile  = configFile("server-key.pem")
-	ClientCertFile = configFile("client.pem")
-	ClientKeyFile  = configFile("client-key.pem")
+	CAFile               = certFile("ca.pem")
+	ServerCertFile       = certFile("server.pem")
+	ServerKeyFile        = certFile("server-key.pem")
+	ClientCertFile       = certFile("client.pem")
+	ClientKeyFile        = certFile("client-key.pem")
+	NobodyClientCertFile = certFile("nobody-client.pem")
+	NobodyClientKeyFile  = certFile("nobody-client-key.pem")
+	ACLModelFile         = policyFile("model.conf")
+	ACLPolicyFile        = policyFile("policy.csv")
 )
 
-func rootDir() string {
-	_, b, _, _ := runtime.Caller(0)
-	d := path.Join(path.Dir(b))
-	return filepath.Dir(d)
+type FileType string
+
+const (
+	Policy FileType = "Policy"
+	Certs  FileType = "Certs"
+)
+
+func certFile(fileName string) string {
+	return configFile(fileName, Certs)
 }
 
-func configFile(fileName string) string {
-	if dir := os.Getenv("CONFIG_DIR"); dir != "" {
+func policyFile(fileName string) string {
+	return configFile(fileName, Policy)
+}
+
+func configFile(fileName string, fileType FileType) string {
+	homeDir := fileUtils.HomeDir()
+	if fileType == Policy {
+		if dir := os.Getenv("POLICY_PATH"); dir != "" {
+			return filepath.Join(dir, fileName)
+		}
+		return filepath.Join(homeDir, ".policies", fileName)
+	}
+
+	if dir := os.Getenv("CERTS_PATH"); dir != "" {
 		return filepath.Join(dir, fileName)
 	}
 
-	rootDir := rootDir()
-	return filepath.Join(rootDir, ".certs", fileName)
-
-	// homeDir, err := os.UserHomeDir()
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// return filepath.Join(homeDir, ".certs", fileName)
+	return filepath.Join(homeDir, ".certs", fileName)
 }

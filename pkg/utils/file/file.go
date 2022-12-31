@@ -3,7 +3,9 @@ package file
 import (
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/comfforts/comff-stores/pkg/errors"
@@ -38,6 +40,13 @@ var (
 	ErrEndToken          = errors.NewAppError(ERROR_END_TOKEN)
 	ErrBucketNameMissing = errors.NewAppError(ERROR_MISSING_BUCKET_NAME)
 	ErrFileNameMissing   = errors.NewAppError(ERROR_MISSING_FILE_NAME)
+)
+
+type Bases string
+
+const (
+	Internal Bases = "internal"
+	Utils    Bases = "utils"
 )
 
 func CreateDirectory(path string) error {
@@ -75,4 +84,22 @@ func FileStats(filePath string) (fs.FileInfo, error) {
 		}
 	}
 	return fStats, nil
+}
+
+func rootDir() string {
+	_, b, _, _ := runtime.Caller(0)
+	d := path.Join(path.Dir(b))
+	return filepath.Dir(d)
+}
+
+func HomeDir() string {
+	home := rootDir()
+	base := filepath.Base(home)
+	if base == string(Internal) {
+		home = filepath.Join(home, "../")
+	} else if base == string(Utils) {
+		home = filepath.Join(home, "../../")
+	}
+
+	return home
 }

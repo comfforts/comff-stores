@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/comfforts/comff-stores/internal/auth"
 	"github.com/comfforts/comff-stores/internal/config"
 	"github.com/comfforts/comff-stores/internal/server"
 	appConfig "github.com/comfforts/comff-stores/pkg/config"
@@ -63,11 +64,15 @@ func main() {
 		logger.Error("error creating store loader", zap.Error(err), zap.Any("errorType", reflect.TypeOf(err)))
 	}
 
+	// initialize authorizer instance
+	authorizer := auth.NewAuthorizer(config.ACLModelFile, config.ACLPolicyFile, logger)
+
 	// setup mutual TLS config
 	servCfg := &server.Config{
 		StoreService: storeServ,
 		GeoService:   geoServ,
 		StoreLoader:  storeLoader,
+		Authorizer:   authorizer,
 		Logger:       logger,
 	}
 
