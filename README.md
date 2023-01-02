@@ -11,6 +11,8 @@
 - `make start-server` or `cd cmd/store && go run store.go`
 #### apis
 - `brew install grpccurl`
+- Create and add CA and client certs files `cmd/client/certs/<cert-file>`
+- `cd cmd/client`
 - `grpcurl -import-path api/v1 -proto store.proto list`
 - `grpcurl -plaintext localhost:50051 store.v1.Stores/GetStats`
 - `grpcurl -key certs/client-key.pem -cert certs/client.pem -cacert certs/ca.pem localhost:50051 store.v1.Stores/GetStats`

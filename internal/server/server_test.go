@@ -3,8 +3,10 @@ package server
 import (
 	"context"
 	"net"
+	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	api "github.com/comfforts/comff-stores/api/v1"
 	"github.com/comfforts/comff-stores/internal/auth"
@@ -13,10 +15,15 @@ import (
 	"github.com/comfforts/comff-stores/pkg/services/store"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opencensus.io/examples/exporter"
 	"go.uber.org/zap/zaptest"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+
+	fileUtils "github.com/comfforts/comff-stores/pkg/utils/file"
 )
+
+const TEST_LOGS_DIR = "logs"
 
 func TestServer(t *testing.T) {
 	for scenario, fn := range map[string]func(
@@ -83,6 +90,30 @@ func setupTest(t *testing.T, fn func(*Config)) (
 
 	authorizer, err := auth.NewAuthorizer(modelFilePath, policyFilePath, appLogger)
 	require.NoError(t, err)
+
+	mfPath := filepath.Join(TEST_LOGS_DIR, "metrics.log")
+	err = fileUtils.CreateDirectory(mfPath)
+	require.NoError(t, err)
+
+	metricsLogFile, err := os.Create(mfPath)
+	// metricsLogFile, err := ioutil.TempFile("logs", "metrics-*.log")
+	require.NoError(t, err)
+
+	tfPath := filepath.Join(TEST_LOGS_DIR, "traces.log")
+	tracesLogFile, err := os.Create(tfPath)
+	// tracesLogFile, err := ioutil.TempFile("logs", "traces-*.log")
+	require.NoError(t, err)
+
+	telemetryExporter, err := exporter.NewLogExporter(exporter.Options{
+		MetricsLogFile:    metricsLogFile.Name(),
+		TracesLogFile:     tracesLogFile.Name(),
+		ReportingInterval: time.Second,
+	})
+	require.NoError(t, err)
+
+	err = telemetryExporter.Start()
+	require.NoError(t, err)
+
 	cfg = &Config{
 		StoreService: css,
 		Authorizer:   authorizer,
@@ -109,7 +140,8 @@ func setupTest(t *testing.T, fn func(*Config)) (
 	require.NoError(t, err)
 
 	go func() {
-		server.Serve(l)
+		err := server.Serve(l)
+		require.NoError(t, err)
 	}()
 
 	client = api.NewStoresClient(cc)
@@ -120,6 +152,15 @@ func setupTest(t *testing.T, fn func(*Config)) (
 		nbcc.Close()
 		l.Close()
 		css.Clear()
+
+		if telemetryExporter != nil {
+			time.Sleep(1500 * time.Millisecond)
+			telemetryExporter.Stop()
+			telemetryExporter.Close()
+		}
+
+		err := os.RemoveAll(TEST_LOGS_DIR)
+		require.NoError(t, err)
 	}
 }
 

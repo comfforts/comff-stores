@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"reflect"
 	"syscall"
 	"time"
@@ -20,10 +21,13 @@ import (
 	"github.com/comfforts/comff-stores/pkg/services/filestorage"
 	"github.com/comfforts/comff-stores/pkg/services/geocode"
 	"github.com/comfforts/comff-stores/pkg/services/store"
+	"go.opencensus.io/examples/exporter"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+
+	fileUtils "github.com/comfforts/comff-stores/pkg/utils/file"
 )
 
 func main() {
@@ -37,48 +41,17 @@ func main() {
 	logger := logging.NewAppLogger(nil, logCfg)
 
 	logger.Info("creating app configuration")
-	appCfg, err := appConfig.GetAppConfig(logger, "")
+	appCfg, err := appConfig.GetAppConfig("", logger)
 	if err != nil {
 		logger.Fatal("unable to setup config", zap.Error(err))
 		return
 	}
 
-	logger.Info("creating cloud storage client")
-	csc, err := filestorage.NewCloudStorageClient(logger, appCfg.Services.CloudStorageClientCfg)
+	logger.Info("setting up telemetry")
+	telemetryCleanupCallbk, err := setupTelemetry(logger)
 	if err != nil {
-		logger.Error("error creating cloud storage client", zap.Error(err))
-	}
-
-	logger.Info("creating geo coding service instance")
-	geoServ, err := geocode.NewGeoCodeService(appCfg.Services.GeoCodeCfg, csc, logger)
-	if err != nil {
-		logger.Fatal("error initializing maps client", zap.Error(err))
-		return
-	}
-
-	logger.Info("initializing store service instance")
-	storeServ := store.NewStoreService(logger)
-
-	logger.Info("initializing store loader instance")
-	storeLoader, err := jobs.NewStoreLoader(appCfg.Jobs.StoreLoaderConfig, storeServ, csc, logger)
-	if err != nil {
-		logger.Error("error creating store loader", zap.Error(err), zap.Any("errorType", reflect.TypeOf(err)))
-	}
-
-	logger.Info("initializing authorizer instance")
-	authorizer, err := auth.NewAuthorizer(config.PolicyFile(config.ACLModelFile), config.PolicyFile(config.ACLPolicyFile), logger)
-	if err != nil {
-		logger.Error("error initializing authorizer instance", zap.Error(err))
+		logger.Error("error setting up telemetery exporter", zap.Error(err))
 		panic(err)
-	}
-
-	logger.Info("setting up server config")
-	servCfg := &server.Config{
-		StoreService: storeServ,
-		GeoService:   geoServ,
-		StoreLoader:  storeLoader,
-		Authorizer:   authorizer,
-		Logger:       logger,
 	}
 
 	logger.Info("opening a tcp socket address")
@@ -89,22 +62,7 @@ func main() {
 		panic(err)
 	}
 
-	logger.Info("setting up server TLS config")
-	srvTLSConfig, err := config.SetupTLSConfig(config.TLSConfig{
-		CertFile:      config.CertFile(config.ServerCertFile),
-		KeyFile:       config.CertFile(config.ServerKeyFile),
-		CAFile:        config.CertFile(config.CAFile),
-		ServerAddress: listener.Addr().String(),
-		Server:        true,
-	})
-	if err != nil {
-		logger.Error("error setting up TLS config", zap.Error(err))
-		panic(err)
-	}
-	srvCreds := credentials.NewTLS(srvTLSConfig)
-
-	logger.Info("initializing grpc server instance")
-	server, err := server.NewGRPCServer(servCfg, grpc.Creds(srvCreds))
+	server, serverCleanupCallbk, err := setupServer(appCfg, listener.Addr().String(), logger)
 	if err != nil {
 		logger.Error("error starting server", zap.Error(err))
 		panic(err)
@@ -121,13 +79,10 @@ func main() {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
-	logger.Info("starting server shutdown")
 
-	logger.Info("clearing server store data")
-	storeServ.Clear()
-
-	logger.Info("clearing server geo code data")
-	geoServ.Clear()
+	logger.Info("starting server shutdown, flushing telemetry metrics, cache and clearing up stores")
+	serverCleanupCallbk()
+	telemetryCleanupCallbk()
 
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer func() {
@@ -140,4 +95,121 @@ func main() {
 	}()
 	<-ctx.Done()
 	logger.Info("server exiting")
+}
+
+// sets up server and returns server cleanup callback
+func setupServer(appCfg *appConfig.Configuration, addr string, logger *logging.AppLogger) (*grpc.Server, func(), error) {
+	logger.Info("creating cloud storage client")
+	csc, err := filestorage.NewCloudStorageClient(appCfg.Services.CloudStorageClientCfg, logger)
+	if err != nil {
+		logger.Error("error creating cloud storage client", zap.Error(err))
+	}
+
+	logger.Info("creating geo coding service instance")
+	geoServ, err := geocode.NewGeoCodeService(appCfg.Services.GeoCodeCfg, csc, logger)
+	if err != nil {
+		logger.Fatal("error initializing maps client", zap.Error(err))
+		return nil, nil, err
+	}
+
+	logger.Info("initializing store service instance")
+	storeServ := store.NewStoreService(logger)
+
+	callbk := func() {
+		logger.Info("clearing server store data")
+		storeServ.Clear()
+
+		logger.Info("clearing server geo code data")
+		geoServ.Clear()
+	}
+
+	logger.Info("initializing store loader instance")
+	storeLoader, err := jobs.NewStoreLoader(appCfg.Jobs.StoreLoaderConfig, storeServ, csc, logger)
+	if err != nil {
+		logger.Error("error creating store loader", zap.Error(err), zap.Any("errorType", reflect.TypeOf(err)))
+	}
+
+	logger.Info("setting up authorizer")
+	authorizer, err := auth.NewAuthorizer(config.PolicyFile(config.ACLModelFile), config.PolicyFile(config.ACLPolicyFile), logger)
+	if err != nil {
+		logger.Error("error initializing authorizer instance", zap.Error(err))
+		return nil, nil, err
+	}
+
+	logger.Info("setting up server config")
+	servCfg := &server.Config{
+		StoreService: storeServ,
+		GeoService:   geoServ,
+		StoreLoader:  storeLoader,
+		Authorizer:   authorizer,
+		Logger:       logger,
+	}
+
+	logger.Info("setting up server TLS config")
+	srvTLSConfig, err := config.SetupTLSConfig(config.TLSConfig{
+		CertFile:      config.CertFile(config.ServerCertFile),
+		KeyFile:       config.CertFile(config.ServerKeyFile),
+		CAFile:        config.CertFile(config.CAFile),
+		ServerAddress: addr,
+		Server:        true,
+	})
+	if err != nil {
+		logger.Error("error setting up TLS config", zap.Error(err))
+		return nil, callbk, err
+	}
+	srvCreds := credentials.NewTLS(srvTLSConfig)
+
+	logger.Info("initializing grpc server instance")
+	server, err := server.NewGRPCServer(servCfg, grpc.Creds(srvCreds))
+	if err != nil {
+		logger.Error("error starting server", zap.Error(err))
+		return nil, callbk, err
+	}
+
+	return server, callbk, nil
+}
+
+// sets up telemetry and returns telemetery cleanup callback
+func setupTelemetry(logger *logging.AppLogger) (func(), error) {
+	mfPath := filepath.Join("logs", "metrics.log")
+
+	if err := fileUtils.CreateDirectory(mfPath); err != nil {
+		logger.Error("error setting up metrics store", zap.Error(err))
+		return nil, err
+	}
+
+	metricsLogFile, err := os.Create(mfPath)
+	if err != nil {
+		logger.Error("error creating metrics log file", zap.Error(err))
+		return nil, err
+	}
+	logger.Info("metrics log file ", zap.String("name", metricsLogFile.Name()))
+
+	tfPath := filepath.Join("logs", "traces.log")
+	tracesLogFile, err := os.Create(tfPath)
+	if err != nil {
+		logger.Error("error creating traces log file", zap.Error(err))
+		return nil, err
+	}
+	logger.Info("traces log file ", zap.String("name", tracesLogFile.Name()))
+
+	telemetryExporter, err := exporter.NewLogExporter(exporter.Options{
+		MetricsLogFile:    metricsLogFile.Name(),
+		TracesLogFile:     tracesLogFile.Name(),
+		ReportingInterval: time.Second,
+	})
+	if err != nil {
+		logger.Error("error initializing telemetery exporter", zap.Error(err))
+		return nil, err
+	}
+
+	err = telemetryExporter.Start()
+	if err != nil {
+		logger.Error("error starting telemetery exporter", zap.Error(err))
+		return nil, err
+	}
+	return func() {
+		telemetryExporter.Stop()
+		telemetryExporter.Close()
+	}, nil
 }

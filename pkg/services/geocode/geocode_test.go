@@ -38,11 +38,11 @@ func setupTest(t *testing.T) (
 	logger := zaptest.NewLogger(t)
 	appLogger := logging.NewAppLogger(logger, nil)
 
-	appCfg, err := config.GetAppConfig(appLogger, "test-config.json")
+	appCfg, err := config.GetAppConfig("test-config.json", appLogger)
 	require.NoError(t, err)
 
 	cscCfg := appCfg.Services.CloudStorageClientCfg
-	csc, err := filestorage.NewCloudStorageClient(appLogger, cscCfg)
+	csc, err := filestorage.NewCloudStorageClient(cscCfg, appLogger)
 	require.NoError(t, err)
 
 	gscCfg := appCfg.Services.GeoCodeCfg

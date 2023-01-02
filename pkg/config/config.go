@@ -55,7 +55,7 @@ type JobsConfig struct {
 	StoreLoaderConfig StoreLoaderConfig `json:"store_loader"`
 }
 
-func GetAppConfig(logger *logging.AppLogger, fileName string) (*Configuration, error) {
+func GetAppConfig(fileName string, logger *logging.AppLogger) (*Configuration, error) {
 	if fileName == "" {
 		fileName = CONFIG_FILE_NAME
 	}

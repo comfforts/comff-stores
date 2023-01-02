@@ -43,7 +43,7 @@ func NewCloudFileRequest(bucketName, fileName, path string, modTime int64) (Clou
 	}, nil
 }
 
-func NewCloudStorageClient(logger *logging.AppLogger, cfg config.CloudStorageClientConfig) (*CloudStorageClient, error) {
+func NewCloudStorageClient(cfg config.CloudStorageClientConfig, logger *logging.AppLogger) (*CloudStorageClient, error) {
 	if logger == nil {
 		return nil, errors.NewAppError(errors.ERROR_MISSING_REQUIRED)
 	}
