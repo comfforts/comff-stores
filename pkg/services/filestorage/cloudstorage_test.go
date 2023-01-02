@@ -58,11 +58,11 @@ func setupCloudTest(t *testing.T, testCfg TestConfig) (
 	logger := zaptest.NewLogger(t)
 	appLogger := logging.NewAppLogger(logger, nil)
 
-	appCfg, err := config.GetAppConfig(appLogger, "test-config.json")
+	appCfg, err := config.GetAppConfig("test-config.json", appLogger)
 	require.NoError(t, err)
 
 	cscCfg := appCfg.Services.CloudStorageClientCfg
-	fsc, err := NewCloudStorageClient(appLogger, cscCfg)
+	fsc, err := NewCloudStorageClient(cscCfg, appLogger)
 	require.NoError(t, err)
 
 	return fsc, func() {

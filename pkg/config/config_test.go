@@ -19,7 +19,7 @@ func TestGetConfig(t *testing.T) {
 	logger := zaptest.NewLogger(t)
 	appLogger := logging.NewAppLogger(logger, nil)
 
-	config, err := GetAppConfig(appLogger, "")
+	config, err := GetAppConfig("", appLogger)
 	require.NoError(t, err)
 	require.Equal(t, 50051, config.ServicePort)
 

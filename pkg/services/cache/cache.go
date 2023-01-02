@@ -96,6 +96,7 @@ func (c *CacheService) Set(key string, value interface{}, d time.Duration) error
 		c.logger.Error(ERROR_SET_CACHE, zap.Error(err), zap.String("cacheName", c.name))
 		return errors.WrapError(err, ERROR_SET_CACHE)
 	}
+	c.updatedAt = time.Now().Unix()
 	c.logger.Debug(VALUE_ADDED, zap.String("key", key), zap.String("cacheName", c.name))
 	return nil
 }
@@ -106,7 +107,6 @@ func (c *CacheService) Get(key string) (interface{}, time.Time, error) {
 		c.logger.Error(ERROR_GET_CACHE, zap.Error(ErrGetCache), zap.String("cacheName", c.name))
 		return nil, time.Time{}, ErrGetCache
 	}
-	c.updatedAt = time.Now().Unix()
 	c.logger.Debug(RETURNING_VALUE, zap.String("key", key), zap.String("cacheName", c.name))
 	return val, exp, nil
 }

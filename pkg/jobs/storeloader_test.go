@@ -53,11 +53,11 @@ func setupStoreLoader(t *testing.T, testDir string) (
 	ss := store.NewStoreService(appLogger)
 
 	t.Logf(" setupStoreLoader: getting app-config/loader-config %s", "test-config.json")
-	appCfg, err := config.GetAppConfig(appLogger, "test-config.json")
+	appCfg, err := config.GetAppConfig("test-config.json", appLogger)
 	require.NoError(t, err)
 
 	cscCfg := appCfg.Services.CloudStorageClientCfg
-	csc, err := filestorage.NewCloudStorageClient(appLogger, cscCfg)
+	csc, err := filestorage.NewCloudStorageClient(cscCfg, appLogger)
 	require.NoError(t, err)
 
 	slCfg := appCfg.Jobs.StoreLoaderConfig
