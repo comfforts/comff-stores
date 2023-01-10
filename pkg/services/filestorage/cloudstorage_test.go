@@ -36,7 +36,7 @@ func TestCloudFileStorage(t *testing.T) {
 		// "cloud storage file upload across folders succeeds": testUploadAcross,
 	} {
 		testCfg := TestConfig{
-			dir:    "cloud_storage_test/",
+			dir:    fmt.Sprintf("%s/", TEST_DIR),
 			bucket: "comfforts-playground",
 		}
 
@@ -69,8 +69,8 @@ func setupCloudTest(t *testing.T, testCfg TestConfig) (
 
 	return fsc, func() {
 		t.Logf(" test ended, will remove %s folder", testCfg.dir)
-		// err := os.RemoveAll(testCfg.dir)
-		// require.NoError(t, err)
+		err := os.RemoveAll(TEST_DIR)
+		require.NoError(t, err)
 	}
 }
 

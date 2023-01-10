@@ -57,6 +57,9 @@ func setupTest(t *testing.T) (
 
 		err = os.RemoveAll(TEST_DIR)
 		require.NoError(t, err)
+
+		err = os.RemoveAll("geo")
+		require.NoError(t, err)
 	}
 }
 

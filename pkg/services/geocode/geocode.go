@@ -177,29 +177,30 @@ func (g *GeoCodeService) uploadCache() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	dataPath := filepath.Join(g.config.DataDir, fmt.Sprintf("%s.json", cache.CACHE_FILE_NAME))
-	fStats, err := fileUtils.FileStats(dataPath)
+	cachePath := filepath.Join(g.config.DataDir, "geo")
+	cacheFile := filepath.Join(cachePath, fmt.Sprintf("%s.json", cache.CACHE_FILE_NAME))
+	fStats, err := fileUtils.FileStats(cacheFile)
 	if err != nil {
-		g.logger.Error("error accessing file", zap.Error(err), zap.String("filepath", dataPath))
-		return errors.WrapError(err, fileUtils.ERROR_NO_FILE, dataPath)
+		g.logger.Error("error accessing file", zap.Error(err), zap.String("filepath", cacheFile))
+		return errors.WrapError(err, fileUtils.ERROR_NO_FILE, cacheFile)
 	}
 	fmod := fStats.ModTime().Unix()
-	g.logger.Info("file mod time", zap.Int64("modtime", fmod), zap.String("filepath", dataPath))
+	g.logger.Info("file mod time", zap.Int64("modtime", fmod), zap.String("filepath", cacheFile))
 
-	file, err := os.Open(dataPath)
+	file, err := os.Open(cacheFile)
 	if err != nil {
-		g.logger.Error("error accessing file", zap.Error(err), zap.String("filepath", dataPath))
-		return errors.WrapError(err, fileUtils.ERROR_NO_FILE, dataPath)
+		g.logger.Error("error accessing file", zap.Error(err), zap.String("filepath", cacheFile))
+		return errors.WrapError(err, fileUtils.ERROR_NO_FILE, cacheFile)
 	}
 	defer func() {
 		if err := file.Close(); err != nil {
-			g.logger.Error("error closing file", zap.Error(err), zap.String("filepath", dataPath))
+			g.logger.Error("error closing file", zap.Error(err), zap.String("filepath", cacheFile))
 		}
 	}()
 
-	cfr, err := filestorage.NewCloudFileRequest(g.config.BucketName, filepath.Base(dataPath), filepath.Dir(dataPath), fmod)
+	cfr, err := filestorage.NewCloudFileRequest(g.config.BucketName, filepath.Base(cacheFile), filepath.Dir(cacheFile), fmod)
 	if err != nil {
-		g.logger.Error("error creating request", zap.Error(err), zap.String("filepath", dataPath))
+		g.logger.Error("error creating request", zap.Error(err), zap.String("filepath", cacheFile))
 		return err
 	}
 
@@ -208,7 +209,7 @@ func (g *GeoCodeService) uploadCache() error {
 		g.logger.Error("error uploading file", zap.Error(err))
 		return err
 	}
-	g.logger.Info("uploaded file", zap.String("file", filepath.Base(dataPath)), zap.String("path", filepath.Dir(dataPath)), zap.Int64("bytes", n))
+	g.logger.Info("uploaded file", zap.String("file", filepath.Base(cacheFile)), zap.String("path", filepath.Dir(cacheFile)), zap.Int64("bytes", n))
 	return nil
 }
 
@@ -216,44 +217,45 @@ func (g *GeoCodeService) downloadCache() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	dataPath := filepath.Join(g.config.DataDir, fmt.Sprintf("%s.json", cache.CACHE_FILE_NAME))
+	cachePath := filepath.Join(g.config.DataDir, "geo")
+	cacheFile := filepath.Join(cachePath, fmt.Sprintf("%s.json", cache.CACHE_FILE_NAME))
 	var fmod int64
-	fStats, err := fileUtils.FileStats(dataPath)
+	fStats, err := fileUtils.FileStats(cacheFile)
 	if err != nil {
-		g.logger.Error("error accessing file", zap.Error(err), zap.String("filepath", dataPath))
+		g.logger.Error("error accessing file", zap.Error(err), zap.String("filepath", cacheFile))
 	} else {
 		fmod := fStats.ModTime().Unix()
-		g.logger.Info("file mod time", zap.Int64("modtime", fmod), zap.String("filepath", dataPath))
+		g.logger.Info("file mod time", zap.Int64("modtime", fmod), zap.String("filepath", cacheFile))
 	}
 
-	err = fileUtils.CreateDirectory(dataPath)
+	err = fileUtils.CreateDirectory(cacheFile)
 	if err != nil {
-		g.logger.Error("error creating data directory", zap.Error(err), zap.String("filepath", dataPath))
+		g.logger.Error("error creating data directory", zap.Error(err), zap.String("filepath", cacheFile))
 		return err
 	}
 
-	f, err := os.Create(dataPath)
+	f, err := os.Create(cacheFile)
 	if err != nil {
-		g.logger.Error("error creating file", zap.Error(err), zap.String("filepath", dataPath))
-		return errors.WrapError(err, fileUtils.ERROR_CREATING_FILE, dataPath)
+		g.logger.Error("error creating file", zap.Error(err), zap.String("filepath", cacheFile))
+		return errors.WrapError(err, fileUtils.ERROR_CREATING_FILE, cacheFile)
 	}
 	defer func() {
 		if err := f.Close(); err != nil {
-			g.logger.Error("error closing file", zap.Error(err), zap.String("filepath", dataPath))
+			g.logger.Error("error closing file", zap.Error(err), zap.String("filepath", cacheFile))
 		}
 	}()
 
-	cfr, err := filestorage.NewCloudFileRequest(g.config.BucketName, filepath.Base(dataPath), filepath.Dir(dataPath), fmod)
+	cfr, err := filestorage.NewCloudFileRequest(g.config.BucketName, filepath.Base(cacheFile), filepath.Dir(cacheFile), fmod)
 	if err != nil {
-		g.logger.Error("error creating request", zap.Error(err), zap.String("filepath", dataPath))
+		g.logger.Error("error creating request", zap.Error(err), zap.String("filepath", cacheFile))
 		return err
 	}
 
 	n, err := g.cloudStorage.DownloadFile(ctx, f, cfr)
 	if err != nil {
-		g.logger.Error("error downloading file", zap.Error(err), zap.String("filepath", dataPath))
+		g.logger.Error("error downloading file", zap.Error(err), zap.String("filepath", cacheFile))
 		return err
 	}
-	g.logger.Info("downloaded file", zap.String("file", filepath.Base(dataPath)), zap.String("path", filepath.Dir(dataPath)), zap.Int64("bytes", n))
+	g.logger.Info("downloaded file", zap.String("file", filepath.Base(cacheFile)), zap.String("path", filepath.Dir(cacheFile)), zap.Int64("bytes", n))
 	return nil
 }
