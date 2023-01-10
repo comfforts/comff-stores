@@ -2,7 +2,7 @@ package log
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"testing"
 
@@ -95,7 +95,7 @@ func testReaderRecorder(t *testing.T, recorder *Recorder) {
 	require.Equal(t, uint64(0), off)
 
 	reader := recorder.Reader()
-	b, err := ioutil.ReadAll(reader)
+	b, err := io.ReadAll(reader)
 	require.NoError(t, err)
 
 	read := &api.Record{}

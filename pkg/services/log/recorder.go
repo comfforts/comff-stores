@@ -2,7 +2,6 @@ package log
 
 import (
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"sort"
@@ -42,7 +41,7 @@ func NewRecorder(dir string, c Config) (*Recorder, error) {
 }
 
 func (r *Recorder) setup() error {
-	files, err := ioutil.ReadDir(r.Dir)
+	files, err := os.ReadDir(r.Dir)
 	if err != nil {
 		return err
 	}
