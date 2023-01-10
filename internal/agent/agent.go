@@ -296,7 +296,7 @@ func (a *Agent) setupServer() error {
 
 	go func() {
 		a.logger.Info("server will start listening for requests", zap.String("port", grpcLn.Addr().String()))
-		if err := a.server.Serve(grpcLn); err != nil && !errors.Is(err, net.ErrClosed) {
+		if err := a.server.Serve(grpcLn); err != nil && !errors.Is(err, cmux.ErrServerClosed) {
 			a.logger.Error("server failed to start serving", zap.Error(err), zap.Any("errorType", reflect.TypeOf(err)))
 			_ = a.Shutdown()
 		}

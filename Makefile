@@ -57,6 +57,7 @@ run-docker-test:
 .PHONY: start-agent
 start-agent:
 	@echo "starting agent with latest ${HEAD}"
+	rm -rf cmd/cli/data/raft
 	cd cmd/cli && go run main.go --config-file config.yaml
 
 .PHONY: build-agent-docker
