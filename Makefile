@@ -54,3 +54,19 @@ run-docker-test:
 	@echo "running docker image build for ${HEAD}"
 	scripts/run-test.sh
 
+.PHONY: start-agent
+start-agent:
+	@echo "starting agent with latest ${HEAD}"
+	cd cmd/cli && go run main.go --config-file config.yaml
+
+.PHONY: build-agent-docker
+build-agent-docker:
+	@echo "building docker image for ${HEAD}"
+	scripts/build-agent-docker.sh
+
+.PHONY: run-agent-docker
+run-agent-docker:
+	@echo "running docker image build for ${HEAD}"
+	scripts/run-agent-docker.sh
+
+

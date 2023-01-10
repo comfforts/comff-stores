@@ -12,6 +12,13 @@
             "program": "${fileDirname}"
         },
         {
+            "name": "Launch Agent",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "cmd/cli/main.go"
+        },
+        {
             "name": "Launch Store",
             "type": "go",
             "request": "launch",
