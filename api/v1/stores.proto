@@ -85,6 +85,18 @@ message StoreUploadResponse {
     bool ok = 1;
 }
 
+message Server {
+    string id = 1;
+    string rpcAddr = 2;
+    bool isLeader = 3; 
+}
+
+message GetServersRequest {}
+
+message GetServersResponse {
+    repeated Server servers = 1;
+}
+
 service Stores {
     rpc AddStore(AddStoreRequest) returns (AddStoreResponse) {}
     rpc GetStore(GetStoreRequest) returns (GetStoreResponse) {}
@@ -92,4 +104,5 @@ service Stores {
     rpc GetStats(StatsRequest) returns (StatsResponse) {}
     rpc GeoLocate(GeoLocationRequest) returns (GeoLocationResponse) {}
     rpc StoreUpload(StoreUploadRequest) returns (StoreUploadResponse) {}
+    rpc GetServers(GetServersRequest) returns (GetServersResponse) {}
 }
