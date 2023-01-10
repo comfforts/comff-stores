@@ -35,8 +35,7 @@ func main() {
 
 	fmt.Println("  initializing app logger instance")
 	logCfg := &logging.AppLoggerConfig{
-		FilePath: "logs/app.log",
-		Level:    zapcore.DebugLevel,
+		Level: zapcore.DebugLevel,
 	}
 	logger := logging.NewAppLogger(nil, logCfg)
 
@@ -117,7 +116,7 @@ func setupServer(appCfg *appConfig.Configuration, addr string, logger *logging.A
 
 	callbk := func() {
 		logger.Info("clearing server store data")
-		storeServ.Clear()
+		storeServ.Close()
 
 		logger.Info("clearing server geo code data")
 		geoServ.Clear()
@@ -162,7 +161,7 @@ func setupServer(appCfg *appConfig.Configuration, addr string, logger *logging.A
 	logger.Info("initializing grpc server instance")
 	server, err := server.NewGRPCServer(servCfg, grpc.Creds(srvCreds))
 	if err != nil {
-		logger.Error("error starting server", zap.Error(err))
+		logger.Error("error initializing server", zap.Error(err))
 		return nil, callbk, err
 	}
 

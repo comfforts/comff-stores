@@ -2,7 +2,6 @@ package jobs
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -13,23 +12,21 @@ import (
 	"github.com/comfforts/comff-stores/pkg/constants"
 	"github.com/comfforts/comff-stores/pkg/errors"
 	"github.com/comfforts/comff-stores/pkg/logging"
-	fileModels "github.com/comfforts/comff-stores/pkg/models/file"
 	storeModels "github.com/comfforts/comff-stores/pkg/models/store"
 	"github.com/comfforts/comff-stores/pkg/services/filestorage"
-	"github.com/comfforts/comff-stores/pkg/services/store"
 	fileUtils "github.com/comfforts/comff-stores/pkg/utils/file"
 	"go.uber.org/zap"
 )
 
 type StoreLoader struct {
 	logger       *logging.AppLogger
-	stores       *store.StoreService
+	stores       storeModels.Stores
 	config       config.StoreLoaderConfig
 	localStorage *filestorage.LocalStorageClient
 	cloudStorage *filestorage.CloudStorageClient
 }
 
-func NewStoreLoader(cfg config.StoreLoaderConfig, ss *store.StoreService, csc *filestorage.CloudStorageClient, l *logging.AppLogger) (*StoreLoader, error) {
+func NewStoreLoader(cfg config.StoreLoaderConfig, ss storeModels.Stores, csc *filestorage.CloudStorageClient, l *logging.AppLogger) (*StoreLoader, error) {
 	if ss == nil || l == nil || cfg.BucketName == "" {
 		return nil, errors.NewAppError(errors.ERROR_MISSING_REQUIRED)
 	}
@@ -165,7 +162,7 @@ func (jd *StoreLoader) queueStoreProcessing(
 	storeQueue chan *storeModels.Store,
 	cancel func(),
 ) {
-	store, err := store.MapResultToStore(r)
+	store, err := storeModels.MapResultToStore(r)
 	if err != nil {
 		jd.logger.Error("error processing store data", zap.Error(err), zap.Any("storeJson", r))
 	} else {
@@ -270,41 +267,16 @@ func (jd *StoreLoader) getFromStorage(ctx context.Context, filePath string) erro
 }
 
 func (jd *StoreLoader) StoreDataFile(ctx context.Context, filePath string) error {
-	stores := jd.stores.GetAllStores()
-	data := []fileModels.JSONMapper{}
-	for _, v := range stores {
-		data = append(data, fileModels.JSONMapper{
-			"store_id":  v.StoreId,
-			"city":      v.City,
-			"name":      v.Name,
-			"country":   v.Country,
-			"longitude": v.Longitude,
-			"latitude":  v.Latitude,
-		})
-	}
-
 	dataPath := filepath.Join(jd.config.DataPath, filePath)
-	err := fileUtils.CreateDirectory(dataPath)
+	file, err := jd.stores.Reader(ctx, dataPath)
 	if err != nil {
-		jd.logger.Error("error creating data directory", zap.Error(err))
+		jd.logger.Error("error saving data file", zap.Error(err), zap.String("filepath", filePath))
 		return err
 	}
 
-	f, err := os.Create(dataPath)
+	err = file.Close()
 	if err != nil {
-		jd.logger.Error("error creating file", zap.Error(err), zap.String("filepath", filePath))
-		return errors.WrapError(err, fileUtils.ERROR_CREATING_FILE, filePath)
-	}
-	defer func() {
-		if err := f.Close(); err != nil {
-			jd.logger.Error("error closing file", zap.Error(err), zap.String("filepath", filePath))
-		}
-	}()
-
-	enc := json.NewEncoder(f)
-	err = enc.Encode(data)
-	if err != nil {
-		jd.logger.Error("error saving data file", zap.Error(err), zap.String("filepath", filePath))
+		jd.logger.Error("error closing data file", zap.Error(err), zap.String("filepath", filePath))
 		return err
 	}
 	return nil

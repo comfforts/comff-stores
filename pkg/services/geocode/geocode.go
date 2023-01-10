@@ -16,7 +16,6 @@ import (
 	"github.com/comfforts/comff-stores/pkg/services/cache"
 	"github.com/comfforts/comff-stores/pkg/services/filestorage"
 	fileUtils "github.com/comfforts/comff-stores/pkg/utils/file"
-	"github.com/comfforts/comff-stores/pkg/utils/geohash"
 	"go.uber.org/zap"
 )
 
@@ -28,7 +27,7 @@ type GeoCodeService struct {
 }
 
 func unmarshalLPoint(p interface{}) (interface{}, error) {
-	var point geohash.Point
+	var point geoModels.Point
 	body, err := json.Marshal(p)
 	if err != nil {
 		appErr := errors.WrapError(err, cache.ERROR_MARSHALLING_CACHE_OBJECT)
@@ -63,14 +62,15 @@ func NewGeoCodeService(cfg config.GeoCodeServiceConfig, csc *filestorage.CloudSt
 	}
 
 	if cfg.Cached {
-		dataPath := filepath.Join(cfg.DataPath, fmt.Sprintf("%s.json", cache.CACHE_FILE_NAME))
-		if _, err := fileUtils.FileStats(dataPath); err != nil {
+		cachePath := filepath.Join(cfg.DataDir, "geo")
+		cacheFile := filepath.Join(cachePath, fmt.Sprintf("%s.json", cache.CACHE_FILE_NAME))
+		if _, err := fileUtils.FileStats(cacheFile); err != nil {
 			if err := gcSrv.downloadCache(); err != nil {
 				logger.Error("error getting cache from storage", zap.Error(err))
 			}
 		}
 
-		c, err := cache.NewCacheService(cfg.DataPath, logger, unmarshalLPoint)
+		c, err := cache.NewCacheService(cachePath, logger, unmarshalLPoint)
 		if err != nil {
 			logger.Error("error setting up cache service", zap.Error(err))
 			return nil, err
@@ -80,7 +80,7 @@ func NewGeoCodeService(cfg config.GeoCodeServiceConfig, csc *filestorage.CloudSt
 	return &gcSrv, nil
 }
 
-func (g *GeoCodeService) Geocode(ctx context.Context, postalCode, countryCode string) (*geohash.Point, error) {
+func (g *GeoCodeService) Geocode(ctx context.Context, postalCode, countryCode string) (*geoModels.Point, error) {
 	if ctx == nil {
 		g.logger.Error("context is nil", zap.Error(errors.ErrNilContext))
 		return nil, errors.ErrNilContext
@@ -116,7 +116,7 @@ func (g *GeoCodeService) Geocode(ctx context.Context, postalCode, countryCode st
 	}
 	lat, long := results.Results[0].Geometry.Location.Lat, results.Results[0].Geometry.Location.Lng
 
-	geoPoint := geohash.Point{
+	geoPoint := geoModels.Point{
 		Latitude:  lat,
 		Longitude: long,
 	}
@@ -150,13 +150,13 @@ func (g *GeoCodeService) postalCodeURL(countryCode, postalCode string) string {
 	return fmt.Sprintf("%s%s?components=country:%s|postal_code:%s&sensor=false&key=%s", g.config.Host, g.config.Path, countryCode, postalCode, g.config.GeocoderKey)
 }
 
-func (g *GeoCodeService) getFromCache(postalCode string) (*geohash.Point, time.Time, error) {
+func (g *GeoCodeService) getFromCache(postalCode string) (*geoModels.Point, time.Time, error) {
 	val, exp, err := g.cache.Get(postalCode)
 	if err != nil {
 		g.logger.Error(cache.ERROR_GET_CACHE, zap.Error(err), zap.String("postalCode", postalCode))
 		return nil, exp, err
 	}
-	point, ok := val.(geohash.Point)
+	point, ok := val.(geoModels.Point)
 	if !ok {
 		g.logger.Error("error getting cache point value", zap.Error(cache.ErrGetCache), zap.String("postalCode", postalCode))
 		return nil, exp, cache.ErrGetCache
@@ -164,7 +164,7 @@ func (g *GeoCodeService) getFromCache(postalCode string) (*geohash.Point, time.T
 	return &point, exp, nil
 }
 
-func (g *GeoCodeService) setInCache(postalCode string, point geohash.Point) error {
+func (g *GeoCodeService) setInCache(postalCode string, point geoModels.Point) error {
 	err := g.cache.Set(postalCode, point, geoModels.OneYear)
 	if err != nil {
 		g.logger.Error(cache.ERROR_SET_CACHE, zap.Error(err), zap.String("postalCode", postalCode))
@@ -177,7 +177,7 @@ func (g *GeoCodeService) uploadCache() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	dataPath := filepath.Join(g.config.DataPath, fmt.Sprintf("%s.json", cache.CACHE_FILE_NAME))
+	dataPath := filepath.Join(g.config.DataDir, fmt.Sprintf("%s.json", cache.CACHE_FILE_NAME))
 	fStats, err := fileUtils.FileStats(dataPath)
 	if err != nil {
 		g.logger.Error("error accessing file", zap.Error(err), zap.String("filepath", dataPath))
@@ -216,7 +216,7 @@ func (g *GeoCodeService) downloadCache() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	dataPath := filepath.Join(g.config.DataPath, fmt.Sprintf("%s.json", cache.CACHE_FILE_NAME))
+	dataPath := filepath.Join(g.config.DataDir, fmt.Sprintf("%s.json", cache.CACHE_FILE_NAME))
 	var fmod int64
 	fStats, err := fileUtils.FileStats(dataPath)
 	if err != nil {

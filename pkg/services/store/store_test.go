@@ -2,13 +2,19 @@ package store
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	"github.com/comfforts/comff-stores/pkg/logging"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap/zaptest"
+
+	storeModels "github.com/comfforts/comff-stores/pkg/models/store"
+
+	testUtils "github.com/comfforts/comff-stores/pkg/utils/test"
 )
+
+const TEST_DIR = "test-data"
 
 func TestStoreService(t *testing.T) {
 	for scenario, fn := range map[string]func(
@@ -33,21 +39,23 @@ func setupStoreTest(t *testing.T) (
 ) {
 	t.Helper()
 
-	logger := zaptest.NewLogger(t)
-	appLogger := logging.NewAppLogger(logger, nil)
+	appLogger := logging.NewTestAppLogger(TEST_DIR)
 	ss = NewStoreService(appLogger)
 
 	return ss, func() {
 		t.Logf(" TestStoreService ended, will clear store data")
-		ss.Clear()
+		ss.Close()
+
+		err := os.RemoveAll(TEST_DIR)
+		require.NoError(t, err)
 	}
 }
 
 func testMapResultToStore(t *testing.T, ss *StoreService) {
-	storeId, name, org, city := 1, "Plaza Hollywood", "starbucks", "Hong Kong"
-	storeJSON := createStoreJSON(uint64(storeId), name, org, city)
+	storeId, name, org, city, country := 1, "Plaza Hollywood", "starbucks", "Hong Kong", "CN"
+	storeJSON := testUtils.CreateStoreJSON(uint64(storeId), name, org, city, country)
 
-	store, err := MapResultToStore(storeJSON)
+	store, err := storeModels.MapResultToStore(storeJSON)
 	require.NoError(t, err)
 
 	assert.Equal(t, store.StoreId, uint64(storeId), "storeId should be mapped")
@@ -59,10 +67,10 @@ func testMapResultToStore(t *testing.T, ss *StoreService) {
 func testAddStoreGetStats(t *testing.T, ss *StoreService) {
 	t.Helper()
 
-	storeId, name, org, city := 1, "Plaza Hollywood", "starbucks", "Hong Kong"
-	sj := createStoreJSON(uint64(storeId), name, org, city)
+	storeId, name, org, city, country := 1, "Plaza Hollywood", "starbucks", "Hong Kong", "CN"
+	sj := testUtils.CreateStoreJSON(uint64(storeId), name, org, city, country)
 
-	store, err := MapResultToStore(sj)
+	store, err := storeModels.MapResultToStore(sj)
 	require.NoError(t, err)
 
 	ctx := context.Background()
@@ -79,10 +87,10 @@ func testAddStoreGetStats(t *testing.T, ss *StoreService) {
 func testAddStoreGetStore(t *testing.T, ss *StoreService) {
 	t.Helper()
 
-	storeId, name, org, city := 1, "Plaza Hollywood", "starbucks", "Hong Kong"
-	sj := createStoreJSON(uint64(storeId), name, org, city)
+	storeId, name, org, city, country := 1, "Plaza Hollywood", "starbucks", "Hong Kong", "CN"
+	sj := testUtils.CreateStoreJSON(uint64(storeId), name, org, city, country)
 
-	store, err := MapResultToStore(sj)
+	store, err := storeModels.MapResultToStore(sj)
 	require.NoError(t, err)
 
 	ctx := context.Background()
@@ -110,19 +118,6 @@ func testAddStoreGetStore(t *testing.T, ss *StoreService) {
 	assert.Equal(t, savedStore.Org, org, "store id should match")
 	assert.Equal(t, savedStore.Name, name, "store name should match")
 	assert.Equal(t, savedStore.City, city, "city should match")
-}
-
-func createStoreJSON(storeId uint64, name, org, city string) map[string]interface{} {
-	s := map[string]interface{}{
-		"name":      name,
-		"org":       org,
-		"city":      city,
-		"country":   "CN",
-		"longitude": 114.20169067382812,
-		"latitude":  22.340700149536133,
-		"store_id":  storeId,
-	}
-	return s
 }
 
 // func TestMapResultToStore(t *testing.T) {

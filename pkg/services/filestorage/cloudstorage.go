@@ -2,7 +2,6 @@ package filestorage
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -177,7 +176,7 @@ func (lc *CloudStorageClient) DeleteObjects(ctx context.Context, cfr CloudFileRe
 				return errors.WrapError(err, fileUtils.ERROR_LISTING_OBJECTS)
 			}
 		}
-		fmt.Printf(" object attributes: %v\n", objAttrs)
+		lc.logger.Info("object attributes", zap.Any("objAttrs", objAttrs))
 		if err := bucket.Object(objAttrs.Name).Delete(ctx); err != nil {
 			lc.logger.Error(fileUtils.ERROR_DELETING_OBJECTS, zap.Error(err))
 			return errors.WrapError(err, fileUtils.ERROR_DELETING_OBJECTS)

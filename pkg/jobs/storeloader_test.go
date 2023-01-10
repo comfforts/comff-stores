@@ -14,8 +14,9 @@ import (
 	fileUtils "github.com/comfforts/comff-stores/pkg/utils/file"
 	testUtils "github.com/comfforts/comff-stores/pkg/utils/test"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap/zaptest"
 )
+
+const TEST_DIR = "test-data"
 
 func TestStoreLoaderJob(t *testing.T) {
 	for scenario, fn := range map[string]func(
@@ -29,7 +30,7 @@ func TestStoreLoaderJob(t *testing.T) {
 		"local file processing succeeds": testProcessingLocalFile,
 		"cloud file processing succeeds": testProcessingCloudFile,
 	} {
-		testDir := "testing_store_loader"
+		testDir := TEST_DIR
 		t.Run(scenario, func(t *testing.T) {
 			loader, teardown := setupStoreLoader(t, testDir)
 			defer teardown()
@@ -48,8 +49,7 @@ func setupStoreLoader(t *testing.T, testDir string) (
 	err := fileUtils.CreateDirectory(fmt.Sprintf("%s/", testDir))
 	require.NoError(t, err)
 
-	logger := zaptest.NewLogger(t)
-	appLogger := logging.NewAppLogger(logger, nil)
+	appLogger := logging.NewTestAppLogger(TEST_DIR)
 	ss := store.NewStoreService(appLogger)
 
 	t.Logf(" setupStoreLoader: getting app-config/loader-config %s", "test-config.json")
@@ -67,7 +67,7 @@ func setupStoreLoader(t *testing.T, testDir string) (
 
 	return sl, func() {
 		t.Logf(" TestStoreService ended, will clear store data")
-		sl.stores.Clear()
+		sl.stores.Close()
 
 		err := os.RemoveAll(testDir)
 		require.NoError(t, err)
@@ -100,6 +100,9 @@ func testSaveDataFile(t *testing.T, loader *StoreLoader, testDir string) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	err = loader.ProcessFile(ctx, fPath)
+	require.NoError(t, err)
 
 	err = loader.StoreDataFile(ctx, fPath)
 	require.NoError(t, err)

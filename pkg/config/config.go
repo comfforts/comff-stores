@@ -37,7 +37,7 @@ type GeoCodeServiceConfig struct {
 	Host        string `json:"host"`
 	Path        string `json:"path"`
 	Cached      bool   `json:"cached"`
-	DataPath    string `json:"data_path"`
+	DataDir     string `json:"data-dir"`
 	BucketName  string `json:"bucket_name"`
 }
 

@@ -16,6 +16,8 @@ import (
 	testUtils "github.com/comfforts/comff-stores/pkg/utils/test"
 )
 
+const TEST_DIR = "test-data"
+
 type TestConfig struct {
 	dir    string
 	bucket string
@@ -67,8 +69,8 @@ func setupCloudTest(t *testing.T, testCfg TestConfig) (
 
 	return fsc, func() {
 		t.Logf(" test ended, will remove %s folder", testCfg.dir)
-		err := os.RemoveAll(testCfg.dir)
-		require.NoError(t, err)
+		// err := os.RemoveAll(testCfg.dir)
+		// require.NoError(t, err)
 	}
 }
 

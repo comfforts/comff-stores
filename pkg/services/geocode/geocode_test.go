@@ -7,12 +7,13 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap/zaptest"
 
 	"github.com/comfforts/comff-stores/pkg/config"
 	"github.com/comfforts/comff-stores/pkg/logging"
 	"github.com/comfforts/comff-stores/pkg/services/filestorage"
 )
+
+const TEST_DIR = "test-data"
 
 func TestGeocoder(t *testing.T) {
 	for scenario, fn := range map[string]func(
@@ -35,8 +36,7 @@ func setupTest(t *testing.T) (
 ) {
 	t.Helper()
 
-	logger := zaptest.NewLogger(t)
-	appLogger := logging.NewAppLogger(logger, nil)
+	appLogger := logging.NewTestAppLogger(TEST_DIR)
 
 	appCfg, err := config.GetAppConfig("test-config.json", appLogger)
 	require.NoError(t, err)
@@ -52,7 +52,10 @@ func setupTest(t *testing.T) (
 	return gsc, func() {
 		t.Log(" TestGeocoder ended")
 
-		err := os.RemoveAll(gscCfg.DataPath)
+		err := os.RemoveAll(gscCfg.DataDir)
+		require.NoError(t, err)
+
+		err = os.RemoveAll(TEST_DIR)
 		require.NoError(t, err)
 	}
 }
