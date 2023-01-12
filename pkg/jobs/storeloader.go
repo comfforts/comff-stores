@@ -153,6 +153,7 @@ func (jd *StoreLoader) queueFileStreaming(
 			if r.Error != nil {
 				jd.logger.Info("store data file result stream closed")
 			}
+			storeUpdateWaitGrp.Wait()
 		}
 	}
 }
@@ -204,6 +205,7 @@ func (jd *StoreLoader) addStore(ctx context.Context, s *storeModels.Store) (*sto
 		fileName := filepath.Base(ctx.Value(constants.FilePathContextKey).(string))
 		s.Org = fileName[0:strings.Index(fileName, ".")]
 	}
+	// time.Sleep(50 * time.Millisecond)
 	return jd.stores.AddStore(ctx, s)
 }
 

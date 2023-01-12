@@ -39,6 +39,7 @@ func TestMultipleNodes(t *testing.T) {
 		config.Raft.LeaderLeaseTimeout = 500 * time.Millisecond
 		config.Raft.CommitTimeout = 5 * time.Millisecond
 		config.Segment.MaxIndexSize = 10
+		config.Segment.InitialOffset = 1
 		config.Raft.BindAddr = ln.Addr().String()
 
 		config.Logger = logging.NewTestAppLogger(dataDir)

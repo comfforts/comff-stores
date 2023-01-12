@@ -158,12 +158,12 @@ func (a *Agent) setupDistributedStores() error {
 	cfg.Raft.BindAddr = rpcAddr
 	cfg.Raft.LocalID = raft.ServerID(a.Config.NodeName)
 
-	cfg.Raft.HeartbeatTimeout = 500 * time.Millisecond
-	cfg.Raft.ElectionTimeout = 500 * time.Millisecond
-	cfg.Raft.LeaderLeaseTimeout = 500 * time.Millisecond
+	cfg.Raft.HeartbeatTimeout = 20 * time.Millisecond
+	cfg.Raft.ElectionTimeout = 20 * time.Millisecond
+	cfg.Raft.LeaderLeaseTimeout = 20 * time.Millisecond
 	cfg.Raft.CommitTimeout = 5 * time.Millisecond
-	cfg.Segment.MaxIndexSize = 200
-	cfg.Segment.InitialOffset = 0
+	cfg.Segment.MaxIndexSize = 500
+	cfg.Segment.InitialOffset = 1
 
 	cfg.Raft.Bootstrap = a.Config.Bootstrap
 	cfg.Logger = a.logger
@@ -279,6 +279,7 @@ func (a *Agent) setupServer() error {
 		GeoService:   geoServ,
 		StoreLoader:  storeLoader,
 		Authorizer:   authorizer,
+		Servicer:     a.stores,
 		Logger:       a.logger,
 	}
 

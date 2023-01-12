@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sync"
 
 	"github.com/comfforts/comff-stores/pkg/errors"
@@ -179,6 +180,10 @@ func (ss *StoreService) Reader(ctx context.Context, filePath string) (*os.File, 
 			"latitude":  v.Latitude,
 			"created":   v.Created,
 		})
+	}
+
+	if filePath == "" {
+		filePath = filepath.Join("data", "stores.json")
 	}
 
 	err := fileUtils.CreateDirectory(filePath)

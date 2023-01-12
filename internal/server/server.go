@@ -43,6 +43,7 @@ const (
 	searchAction   = "search"
 	uploadAction   = "upload"
 	locateAction   = "locate"
+	serversAction  = "servers"
 )
 
 type subjectContextKey struct{}
@@ -55,11 +56,16 @@ type Authorizer interface {
 	Authorize(subject, object, action string) error
 }
 
+type Servicer interface {
+	GetServers(context.Context) ([]*api.Server, error)
+}
+
 type Config struct {
 	StoreService storeModels.Stores
 	GeoService   geoModels.GeoCoder
 	StoreLoader  fileModels.Loader
 	Authorizer   Authorizer
+	Servicer     Servicer
 	Logger       *logging.AppLogger
 }
 
@@ -300,6 +306,19 @@ func (s *grpcServer) StoreUpload(ctx context.Context, req *api.StoreUploadReques
 
 	return &api.StoreUploadResponse{
 		Ok: true,
+	}, nil
+}
+
+func (s *grpcServer) GetServers(ctx context.Context, req *api.GetServersRequest) (*api.GetServersResponse, error) {
+	servers, err := s.Servicer.GetServers(ctx)
+	if err != nil {
+		s.Logger.Error("error completing get servers request", zap.Error(err))
+		st := status.New(codes.NotFound, "error completing get servers request")
+		return nil, st.Err()
+	}
+
+	return &api.GetServersResponse{
+		Servers: servers,
 	}, nil
 }
 
