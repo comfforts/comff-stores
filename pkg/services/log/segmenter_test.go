@@ -32,10 +32,12 @@ func TestSegmenter(t *testing.T) {
 	require.Equal(t, uint64(16), s.nextOffset)
 	require.False(t, s.IsMaxed())
 
+	t.Logf("base offset: %d, next offset: %d", s.baseOffset, s.nextOffset)
 	for i := uint64(0); i < 5; i++ {
 		off, err := s.Append(want)
 		require.NoError(t, err)
 		require.Equal(t, 16+i, off)
+		t.Logf("base offset: %d, next offset: %d", s.baseOffset, s.nextOffset)
 
 		got, err := s.Read(off)
 		require.NoError(t, err)

@@ -3,6 +3,7 @@ package log
 import (
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path"
 
@@ -25,6 +26,7 @@ type segmenter struct {
 	indexer                *indexer
 	baseOffset, nextOffset uint64
 	config                 Config
+	closed                 bool
 }
 
 func newSegmenter(dir string, baseOffset uint64, c Config) (*segmenter, error) {
@@ -40,6 +42,7 @@ func newSegmenter(dir string, baseOffset uint64, c Config) (*segmenter, error) {
 		filerFile, err = os.Create(fPath)
 	} else {
 		filerFile, err = os.Open(fPath)
+		log.Printf("opened existing filer: %s", fPath)
 	}
 	if err != nil {
 		return nil, errors.WrapError(err, ERROR_OPENING_FILER, fPath)
@@ -56,6 +59,7 @@ func newSegmenter(dir string, baseOffset uint64, c Config) (*segmenter, error) {
 		indexFile, err = os.Create(iPath)
 	} else {
 		indexFile, err = os.Open(iPath)
+		log.Printf("opened existing index: %s", iPath)
 	}
 	if err != nil {
 		return nil, errors.WrapError(err, ERROR_OPENING_INDEX, iPath)
@@ -64,6 +68,7 @@ func newSegmenter(dir string, baseOffset uint64, c Config) (*segmenter, error) {
 	if s.indexer, err = newIndexer(indexFile, c); err != nil {
 		return nil, err
 	}
+	log.Printf("indexer size: %d", s.indexer.size)
 	if off, _, err := s.indexer.Read(-1); err != nil {
 		s.nextOffset = baseOffset
 	} else {
@@ -105,6 +110,7 @@ func (s *segmenter) Read(off uint64) (*api.Record, error) {
 	if err != nil {
 		return nil, err
 	}
+	log.Printf("reading position: %d", pos)
 	p, err := s.filer.Read(pos)
 	if err != nil {
 		return nil, err
@@ -119,18 +125,22 @@ func (s *segmenter) IsMaxed() bool {
 }
 
 func (s *segmenter) Close() error {
+	log.Printf("closing segmenter - offset - base: %d, next: %d", s.baseOffset, s.nextOffset)
 	if err := s.indexer.Close(); err != nil {
 		return err
 	}
 	if err := s.filer.Close(); err != nil {
 		return err
 	}
+	s.closed = true
 	return nil
 }
 
 func (s *segmenter) Remove() error {
-	if err := s.Close(); err != nil {
-		return err
+	if !s.Closed() {
+		if err := s.Close(); err != nil {
+			return err
+		}
 	}
 	if err := os.Remove(s.indexer.Name()); err != nil {
 		return errors.WrapError(err, ERROR_REMOVING_INDEX, s.indexer.Name())
@@ -139,4 +149,8 @@ func (s *segmenter) Remove() error {
 		return errors.WrapError(err, ERROR_REMOVING_FILER, s.filer.Name())
 	}
 	return nil
+}
+
+func (s *segmenter) Closed() bool {
+	return s.closed
 }

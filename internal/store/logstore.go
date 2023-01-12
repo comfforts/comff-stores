@@ -63,6 +63,7 @@ func (l *logStore) StoreLog(record *raft.Log) error {
 }
 
 func (l *logStore) StoreLogs(records []*raft.Log) error {
+	l.logger.Debug("storing logs", zap.Int("len", len(records)))
 	for _, record := range records {
 		if _, err := l.Append(&api.Record{
 			Value: record.Data,

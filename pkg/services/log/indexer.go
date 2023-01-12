@@ -3,6 +3,7 @@ package log
 import (
 	"encoding/gob"
 	"io"
+	"log"
 	"os"
 	"sync"
 
@@ -44,6 +45,8 @@ func newIndexer(f *os.File, c Config) (*indexer, error) {
 	if err != nil {
 		return nil, errors.WrapError(err, ERROR_NO_FILE, f.Name())
 	}
+
+	log.Printf("indexer file size: %d", fi.Size())
 
 	if fi.Size() > 0 {
 		decoder := gob.NewDecoder(f)
@@ -117,7 +120,13 @@ func (i *indexer) Close() error {
 		return errors.WrapError(err, ERROR_ENCODING_INDEX_FILE, i.Name())
 	}
 
+	fs, err := os.Stat(fi.Name())
+	if err != nil {
+		return errors.WrapError(err, ERROR_NO_FILE, fi.Name())
+	}
+
 	i.file = fi
+	log.Printf("indexer file saved and closed, file: %s, file size: %d, index size: %d", i.Name(), fs.Size(), i.size)
 	return i.file.Close()
 }
 

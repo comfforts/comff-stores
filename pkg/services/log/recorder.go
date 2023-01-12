@@ -2,6 +2,7 @@ package log
 
 import (
 	"io"
+	"log"
 	"os"
 	"path"
 	"sort"
@@ -66,6 +67,7 @@ func (r *Recorder) setup() error {
 		i++
 	}
 	if r.segments == nil {
+		log.Printf("setup() - initializing segments, InitialOffset: %d", r.Config.Segment.InitialOffset)
 		if err = r.newSegmenter(r.Config.Segment.InitialOffset); err != nil {
 			return err
 		}
@@ -74,11 +76,15 @@ func (r *Recorder) setup() error {
 }
 
 func (r *Recorder) newSegmenter(off uint64) error {
+	log.Printf("newSegmenter() - creating new segment, offset: %d", off)
 	s, err := newSegmenter(r.Dir, off, r.Config)
 	if err != nil {
 		return err
 	}
 	r.segments = append(r.segments, s)
+	if r.activeSegment != nil && r.activeSegment.baseOffset != r.Config.Segment.InitialOffset {
+		r.activeSegment.Close()
+	}
 	r.activeSegment = s
 	return nil
 }
@@ -90,6 +96,7 @@ func (r *Recorder) Append(record *api.Record) (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
+	log.Printf("Append() - appended record, offset: %d", off)
 	if r.activeSegment.IsMaxed() {
 		err = r.newSegmenter(off + 1)
 	}
@@ -100,13 +107,19 @@ func (r *Recorder) Read(off uint64) (*api.Record, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	var s *segmenter
+	log.Printf("Read() - read offset: %d", off)
+	log.Printf("Read() - has segments: %v", len(r.segments))
 	for _, segment := range r.segments {
+		log.Printf("Read() - segment base offset: %d", segment.baseOffset)
+		log.Printf("Read() - segment nextOffset: %d", segment.nextOffset)
 		if segment.baseOffset <= off && off < segment.nextOffset {
 			s = segment
 			break
 		}
 	}
 	if s == nil || s.nextOffset <= off {
+		log.Printf("Read() - segmenter: %v", s)
+		log.Printf("Read() - segments: %v", r.segments)
 		return nil, errors.NewAppError(ERROR_OFFSET_OUT_OF_RANGE, off)
 	}
 	return s.Read(off)
@@ -115,9 +128,12 @@ func (r *Recorder) Read(off uint64) (*api.Record, error) {
 func (r *Recorder) Close() error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	log.Printf("Close() - closing recorder")
 	for _, segment := range r.segments {
-		if err := segment.Close(); err != nil {
-			return err
+		if !segment.Closed() {
+			if err := segment.Close(); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

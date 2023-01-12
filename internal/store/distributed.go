@@ -55,9 +55,10 @@ type Config struct {
 }
 
 type DistributedStores struct {
-	config Config
-	stores storeModels.Stores
-	raft   *raft.Raft
+	config           Config
+	stores           storeModels.Stores
+	raft             *raft.Raft
+	shutdownCallback func() error
 }
 
 func NewDistributedStores(dataDir string, config Config) (*DistributedStores, error) {
@@ -89,7 +90,6 @@ func (ds *DistributedStores) setupRaft(dataDir string) error {
 		return errors.WrapError(err, ERROR_CREATING_LOG_STORE_DIR)
 	}
 	logConfig := ds.config
-	logConfig.Segment.InitialOffset = 1
 
 	ds.config.Logger.Info("creating raft log store")
 	logStore, err := newLogStore(logDir, logConfig)
@@ -177,11 +177,19 @@ func (ds *DistributedStores) setupRaft(dataDir string) error {
 		ds.config.Logger.Info("bootstrapping raft cluster")
 		err = ds.raft.BootstrapCluster(config).Error()
 	}
+
+	ds.shutdownCallback = func() error {
+		err := logStore.Close()
+		if err != nil {
+			return err
+		}
+		return nil
+	}
 	return err
 }
 
 func (ds *DistributedStores) AddStore(ctx context.Context, s *storeModels.Store) (*storeModels.Store, error) {
-	ds.config.Logger.Info("distributed store AddStore()", zap.String("node", string(ds.config.Raft.LocalID)))
+	ds.config.Logger.Debug("distributed store AddStore()", zap.String("node", string(ds.config.Raft.LocalID)))
 	res, err := ds.apply(
 		AddStoreRequestType,
 		&api.AddStoreRequest{
@@ -205,7 +213,7 @@ func (ds *DistributedStores) apply(reqType RequestType, req proto.Message) (
 	interface{},
 	error,
 ) {
-	ds.config.Logger.Info("distributed store apply()", zap.String("node", string(ds.config.Raft.LocalID)))
+	ds.config.Logger.Debug("distributed store apply()", zap.String("node", string(ds.config.Raft.LocalID)))
 	var buf bytes.Buffer
 	_, err := buf.Write([]byte{byte(reqType)})
 	if err != nil {
@@ -237,17 +245,17 @@ func (ds *DistributedStores) apply(reqType RequestType, req proto.Message) (
 }
 
 func (ds *DistributedStores) GetStore(ctx context.Context, id string) (*storeModels.Store, error) {
-	ds.config.Logger.Info("distributed store GetStore()", zap.String("node", string(ds.config.Raft.LocalID)))
+	ds.config.Logger.Debug("distributed store GetStore()", zap.String("node", string(ds.config.Raft.LocalID)))
 	return ds.stores.GetStore(ctx, id)
 }
 
 func (ds *DistributedStores) GetStoresForGeoPoint(ctx context.Context, lat, long float64, dist int) ([]*storeModels.StoreGeo, error) {
-	ds.config.Logger.Info("distributed store GetStoresForGeoPoint()", zap.String("node", string(ds.config.Raft.LocalID)))
+	ds.config.Logger.Debug("distributed store GetStoresForGeoPoint()", zap.String("node", string(ds.config.Raft.LocalID)))
 	return ds.stores.GetStoresForGeoPoint(ctx, lat, long, dist)
 }
 
 func (ds *DistributedStores) GetStoreStats() storeModels.StoreStats {
-	ds.config.Logger.Info("distributed store GetStoreStats()", zap.String("node", string(ds.config.Raft.LocalID)))
+	ds.config.Logger.Debug("distributed store GetStoreStats()", zap.String("node", string(ds.config.Raft.LocalID)))
 	return ds.stores.GetStoreStats()
 }
 
@@ -290,7 +298,7 @@ func (ds *DistributedStores) Leave(id string) error {
 }
 
 func (ds *DistributedStores) WaitForLeader(timeout time.Duration) error {
-	ds.config.Logger.Debug("distributed store waiting for leader", zap.String("node", string(ds.config.Raft.LocalID)))
+	ds.config.Logger.Info("distributed store waiting for leader", zap.String("node", string(ds.config.Raft.LocalID)))
 	timeoutc := time.After(timeout)
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
@@ -334,10 +342,14 @@ func (ds *DistributedStores) ServerId() string {
 
 func (ds *DistributedStores) Close() error {
 	ds.config.Logger.Info("closing distributed store", zap.String("node", string(ds.config.Raft.LocalID)))
+
 	f := ds.raft.Shutdown()
 	if err := f.Error(); err != nil {
 		ds.config.Logger.Error(ERROR_RAFT_SHUTDOWN, zap.Error(err))
 		return errors.WrapError(err, ERROR_RAFT_SHUTDOWN)
+	}
+	if err := ds.shutdownCallback(); err != nil {
+		return err
 	}
 	ds.stores.Close()
 	return nil

@@ -30,6 +30,7 @@ func TestRecorder(t *testing.T) {
 
 			c := Config{}
 			c.Segment.MaxIndexSize = 3
+			c.Segment.InitialOffset = 0
 			recorder, err := NewRecorder(dir, c)
 			require.NoError(t, err)
 
@@ -62,7 +63,7 @@ func testInitExistingRecorder(t *testing.T, recorder *Recorder) {
 	append := &api.Record{
 		Value: []byte("hello world"),
 	}
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 5; i++ {
 		_, err := recorder.Append(append)
 		require.NoError(t, err)
 	}
@@ -73,7 +74,7 @@ func testInitExistingRecorder(t *testing.T, recorder *Recorder) {
 	require.Equal(t, uint64(0), off)
 	off, err = recorder.HighestOffset()
 	require.NoError(t, err)
-	require.Equal(t, uint64(2), off)
+	require.Equal(t, uint64(4), off)
 
 	n, err := NewRecorder(recorder.Dir, recorder.Config)
 	require.NoError(t, err)
@@ -83,7 +84,7 @@ func testInitExistingRecorder(t *testing.T, recorder *Recorder) {
 	require.Equal(t, uint64(0), off)
 	off, err = n.HighestOffset()
 	require.NoError(t, err)
-	require.Equal(t, uint64(2), off)
+	require.Equal(t, uint64(4), off)
 }
 
 func testReaderRecorder(t *testing.T, recorder *Recorder) {
