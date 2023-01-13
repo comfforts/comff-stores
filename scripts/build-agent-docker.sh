@@ -14,4 +14,4 @@ BUILD_ARCH=$LOCAL_ARCH
 
 cd ${BASEDIR}/../
 echo "building docker image for rev: ${CURR_SHA}, branch: ${CURR_BRANCH}, arch: ${BUILD_OS}/${BUILD_ARCH}"
-docker build --progress=plain --build-arg BUILD_OS=${BUILD_OS} --build-arg BUILD_ARCH=${BUILD_ARCH} -t github.com/comfforts/comff-stores:${CURR_SHA} -f deploy/docker/agent/Dockerfile .
+docker build --progress=plain --build-arg BUILD_OS=${BUILD_OS} --build-arg BUILD_ARCH=${BUILD_ARCH} -t comff-stores-agent:${CURR_SHA} -f deploy/docker/agent/Dockerfile .
