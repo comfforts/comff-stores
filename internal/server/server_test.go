@@ -16,14 +16,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opencensus.io/examples/exporter"
-	"go.uber.org/zap/zaptest"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
 	fileUtils "github.com/comfforts/comff-stores/pkg/utils/file"
+	testUtils "github.com/comfforts/comff-stores/pkg/utils/test"
 )
 
-const TEST_LOGS_DIR = "logs"
+const TEST_DIR = "test-data"
 
 func TestServer(t *testing.T) {
 	for scenario, fn := range map[string]func(
@@ -51,7 +51,7 @@ func setupTest(t *testing.T, fn func(*Config)) (
 ) {
 	t.Helper()
 
-	l, err := net.Listen("tcp", "192.168.68.100:50055")
+	l, err := net.Listen("tcp", "127.0.0.1:50055")
 	require.NoError(t, err)
 
 	caFilePath := filepath.Join("../../cmd/store", config.CertFile(config.CAFile))
@@ -81,8 +81,7 @@ func setupTest(t *testing.T, fn func(*Config)) (
 	cc, client, _ := newClient(config.ClientCertFile, config.ClientKeyFile)
 	nbcc, nbClient, _ := newClient(config.NobodyClientCertFile, config.NobodyClientKeyFile)
 
-	logger := zaptest.NewLogger(t)
-	appLogger := logging.NewAppLogger(logger, nil)
+	appLogger := logging.NewTestAppLogger(TEST_DIR)
 	css := store.NewStoreService(appLogger)
 
 	modelFilePath := filepath.Join("../../cmd/store", config.PolicyFile(config.ACLModelFile))
@@ -91,17 +90,15 @@ func setupTest(t *testing.T, fn func(*Config)) (
 	authorizer, err := auth.NewAuthorizer(modelFilePath, policyFilePath, appLogger)
 	require.NoError(t, err)
 
-	mfPath := filepath.Join(TEST_LOGS_DIR, "metrics.log")
+	mfPath := filepath.Join(TEST_DIR, "logs", "metrics.log")
 	err = fileUtils.CreateDirectory(mfPath)
 	require.NoError(t, err)
 
 	metricsLogFile, err := os.Create(mfPath)
-	// metricsLogFile, err := ioutil.TempFile("logs", "metrics-*.log")
 	require.NoError(t, err)
 
-	tfPath := filepath.Join(TEST_LOGS_DIR, "traces.log")
+	tfPath := filepath.Join(TEST_DIR, "logs", "traces.log")
 	tracesLogFile, err := os.Create(tfPath)
-	// tracesLogFile, err := ioutil.TempFile("logs", "traces-*.log")
 	require.NoError(t, err)
 
 	telemetryExporter, err := exporter.NewLogExporter(exporter.Options{
@@ -117,6 +114,7 @@ func setupTest(t *testing.T, fn func(*Config)) (
 	cfg = &Config{
 		StoreService: css,
 		Authorizer:   authorizer,
+		Logger:       appLogger,
 	}
 	if fn != nil {
 		fn(cfg)
@@ -151,7 +149,7 @@ func setupTest(t *testing.T, fn func(*Config)) (
 		cc.Close()
 		nbcc.Close()
 		l.Close()
-		css.Clear()
+		css.Close()
 
 		if telemetryExporter != nil {
 			time.Sleep(1500 * time.Millisecond)
@@ -159,28 +157,16 @@ func setupTest(t *testing.T, fn func(*Config)) (
 			telemetryExporter.Close()
 		}
 
-		err := os.RemoveAll(TEST_LOGS_DIR)
+		err := os.RemoveAll(TEST_DIR)
 		require.NoError(t, err)
 	}
 }
 
-func defaulAddStoreRequest(storeId uint64, name, org, city string) *api.AddStoreRequest {
-	s := &api.AddStoreRequest{
-		Name:      name,
-		Org:       org,
-		City:      city,
-		Country:   "CN",
-		Longitude: 114.20169067382812,
-		Latitude:  22.340700149536133,
-		StoreId:   storeId,
-	}
-	return s
-}
-
 func testAddAndGetStore(t *testing.T, client, nbClient api.StoresClient, config *Config) {
 	t.Helper()
-	storeId, name, org, city := uint64(1), "Plaza Hollywood", "starbucks", "Hong Kong"
-	addStoreReq := defaulAddStoreRequest(storeId, name, org, city)
+	storeId, name, org, city, country := uint64(1), "Plaza Hollywood", "starbucks", "Hong Kong", "CN"
+	lat, long := 22.3228702545166, 114.21343994140625
+	addStoreReq := testUtils.CreateAddStoreRequest(storeId, name, org, city, country, lat, long)
 
 	ctx := context.Background()
 	addStoreRes, err := client.AddStore(ctx, addStoreReq)
@@ -191,17 +177,18 @@ func testAddAndGetStore(t *testing.T, client, nbClient api.StoresClient, config 
 	require.NoError(t, err)
 	require.Equal(t, addStoreRes.Store.Id, id)
 
-	getStoreReq := &api.GetStoreRequest{Id: id}
+	getStoreReq := &api.GetStoreRequest{Id: addStoreRes.Store.Id}
 	ctx = context.Background()
 	getStoreRes, err := client.GetStore(ctx, getStoreReq)
 	require.NoError(t, err)
-	require.Equal(t, getStoreRes.Store.Id, id)
+	require.Equal(t, getStoreRes.Store.Id, addStoreRes.Store.Id)
 }
 
 func testUnauthorizedAddStore(t *testing.T, client, nbClient api.StoresClient, config *Config) {
 	t.Helper()
-	storeId, name, org, city := uint64(1), "Plaza Hollywood", "starbucks", "Hong Kong"
-	addStoreReq := defaulAddStoreRequest(storeId, name, org, city)
+	storeId, name, org, city, country := uint64(1), "Plaza Hollywood", "starbucks", "Hong Kong", "CN"
+	lat, long := 22.3228702545166, 114.21343994140625
+	addStoreReq := testUtils.CreateAddStoreRequest(storeId, name, org, city, country, lat, long)
 
 	ctx := context.Background()
 	addStoreRes, err := nbClient.AddStore(ctx, addStoreReq)

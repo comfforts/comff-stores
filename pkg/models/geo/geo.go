@@ -1,6 +1,9 @@
 package geo
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
 const (
 	OneYear       = 365 * 24 * 30 * time.Hour
@@ -10,6 +13,10 @@ const (
 	OneHour       = time.Hour
 	ThirtyMinutes = 30 * time.Minute
 )
+
+type GeoCoder interface {
+	Geocode(ctx context.Context, postalCode, countryCode string) (*Point, error)
+}
 
 type GeocoderResults struct {
 	Results []Result `json:"results"`
@@ -49,4 +56,17 @@ type Bounds struct {
 type LatLng struct {
 	Lat float64 `json:"lat"`
 	Lng float64 `json:"lng"`
+}
+
+type Point struct {
+	Latitude  float64 `json:"Latitude"`
+	Longitude float64 `json:"Longitude"`
+}
+type Range struct {
+	Min float64
+	Max float64
+}
+type RangeBounds struct {
+	Latitude  Range
+	Longitude Range
 }

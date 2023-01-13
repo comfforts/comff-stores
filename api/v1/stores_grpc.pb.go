@@ -28,6 +28,7 @@ type StoresClient interface {
 	GetStats(ctx context.Context, in *StatsRequest, opts ...grpc.CallOption) (*StatsResponse, error)
 	GeoLocate(ctx context.Context, in *GeoLocationRequest, opts ...grpc.CallOption) (*GeoLocationResponse, error)
 	StoreUpload(ctx context.Context, in *StoreUploadRequest, opts ...grpc.CallOption) (*StoreUploadResponse, error)
+	GetServers(ctx context.Context, in *GetServersRequest, opts ...grpc.CallOption) (*GetServersResponse, error)
 }
 
 type storesClient struct {
@@ -92,6 +93,15 @@ func (c *storesClient) StoreUpload(ctx context.Context, in *StoreUploadRequest, 
 	return out, nil
 }
 
+func (c *storesClient) GetServers(ctx context.Context, in *GetServersRequest, opts ...grpc.CallOption) (*GetServersResponse, error) {
+	out := new(GetServersResponse)
+	err := c.cc.Invoke(ctx, "/store.v1.Stores/GetServers", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // StoresServer is the server API for Stores service.
 // All implementations must embed UnimplementedStoresServer
 // for forward compatibility
@@ -102,6 +112,7 @@ type StoresServer interface {
 	GetStats(context.Context, *StatsRequest) (*StatsResponse, error)
 	GeoLocate(context.Context, *GeoLocationRequest) (*GeoLocationResponse, error)
 	StoreUpload(context.Context, *StoreUploadRequest) (*StoreUploadResponse, error)
+	GetServers(context.Context, *GetServersRequest) (*GetServersResponse, error)
 	mustEmbedUnimplementedStoresServer()
 }
 
@@ -126,6 +137,9 @@ func (UnimplementedStoresServer) GeoLocate(context.Context, *GeoLocationRequest)
 }
 func (UnimplementedStoresServer) StoreUpload(context.Context, *StoreUploadRequest) (*StoreUploadResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method StoreUpload not implemented")
+}
+func (UnimplementedStoresServer) GetServers(context.Context, *GetServersRequest) (*GetServersResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetServers not implemented")
 }
 func (UnimplementedStoresServer) mustEmbedUnimplementedStoresServer() {}
 
@@ -248,6 +262,24 @@ func _Stores_StoreUpload_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Stores_GetServers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetServersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(StoresServer).GetServers(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/store.v1.Stores/GetServers",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(StoresServer).GetServers(ctx, req.(*GetServersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Stores_ServiceDesc is the grpc.ServiceDesc for Stores service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -278,6 +310,10 @@ var Stores_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "StoreUpload",
 			Handler:    _Stores_StoreUpload_Handler,
+		},
+		{
+			MethodName: "GetServers",
+			Handler:    _Stores_GetServers_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

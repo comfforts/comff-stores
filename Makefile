@@ -54,3 +54,28 @@ run-docker-test:
 	@echo "running docker image build for ${HEAD}"
 	scripts/run-test.sh
 
+.PHONY: start-agent
+start-agent:
+	@echo "starting agent with latest ${HEAD}"
+	rm -rf cmd/cli/data/raft
+	cd cmd/cli && go run comffstore.go --config-file config.yaml
+
+.PHONY: build-agent-exec
+build-agent-exec:
+	@echo "building latest executables for ${HEAD}"
+	scripts/build-agent-exec.sh
+	scripts/build-agent-exec.sh darwin amd64
+	scripts/build-agent-exec.sh linux arm64
+	scripts/build-agent-exec.sh linux amd64
+
+.PHONY: build-agent-docker
+build-agent-docker:
+	@echo "building docker image for ${HEAD}"
+	scripts/build-agent-docker.sh
+
+.PHONY: run-agent-docker
+run-agent-docker:
+	@echo "running docker image build for ${HEAD}"
+	scripts/run-agent-docker.sh
+
+

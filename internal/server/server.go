@@ -22,13 +22,15 @@ import (
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	grpc_ctxtags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
 
+	"google.golang.org/grpc/health"
+	healthpb "google.golang.org/grpc/health/grpc_health_v1"
+
 	api "github.com/comfforts/comff-stores/api/v1"
 
-	"github.com/comfforts/comff-stores/pkg/jobs"
 	"github.com/comfforts/comff-stores/pkg/logging"
+	fileModels "github.com/comfforts/comff-stores/pkg/models/file"
+	geoModels "github.com/comfforts/comff-stores/pkg/models/geo"
 	storeModels "github.com/comfforts/comff-stores/pkg/models/store"
-	"github.com/comfforts/comff-stores/pkg/services/geocode"
-	"github.com/comfforts/comff-stores/pkg/services/store"
 )
 
 var _ api.StoresServer = (*grpcServer)(nil)
@@ -41,6 +43,7 @@ const (
 	searchAction   = "search"
 	uploadAction   = "upload"
 	locateAction   = "locate"
+	serversAction  = "servers"
 )
 
 type subjectContextKey struct{}
@@ -53,11 +56,16 @@ type Authorizer interface {
 	Authorize(subject, object, action string) error
 }
 
+type Servicer interface {
+	GetServers(context.Context) ([]*api.Server, error)
+}
+
 type Config struct {
-	StoreService *store.StoreService
-	GeoService   *geocode.GeoCodeService
-	StoreLoader  *jobs.StoreLoader
+	StoreService storeModels.Stores
+	GeoService   geoModels.GeoCoder
+	StoreLoader  fileModels.Loader
 	Authorizer   Authorizer
+	Servicer     Servicer
 	Logger       *logging.AppLogger
 }
 
@@ -74,7 +82,7 @@ func newGrpcServer(config *Config) (srv *grpcServer, err error) {
 }
 
 func NewGRPCServer(config *Config, opts ...grpc.ServerOption) (*grpc.Server, error) {
-	logger := zap.L().Named("comff-stores").WithOptions()
+	logger := zap.L().Named("comff-stores")
 	zapOpts := []grpc_zap.Option{
 		grpc_zap.WithDurationField(
 			func(duration time.Duration) zapcore.Field {
@@ -113,17 +121,36 @@ func NewGRPCServer(config *Config, opts ...grpc.ServerOption) (*grpc.Server, err
 		grpc.StatsHandler(&ocgrpc.ServerHandler{}),
 	)
 
+	// opts = append(opts,
+	// 	grpc.UnaryInterceptor(
+	// 		grpc_middleware.ChainUnaryServer(
+	// 			grpc_ctxtags.UnaryServerInterceptor(),
+	// 			grpc_auth.UnaryServerInterceptor(authenticate),
+	// 		),
+	// 	),
+	// )
+
+	config.Logger.Info("creating gRPC server instance")
 	gsrv := grpc.NewServer(opts...)
+
+	config.Logger.Info("creating stores gRPC server instance")
 	srv, err := newGrpcServer(config)
 	if err != nil {
 		return nil, err
 	}
 
-	// register grpc server
+	config.Logger.Info("registring stores gRPC server instance")
 	api.RegisterStoresServer(gsrv, srv)
 
-	// enable reflection
+	config.Logger.Info("enabling reflection for stores api")
 	reflection.Register(gsrv)
+
+	config.Logger.Info("creating health gRPC server instance")
+	hserv := health.NewServer()
+	hserv.SetServingStatus("", healthpb.HealthCheckResponse_SERVING)
+
+	config.Logger.Info("registring health gRPC server instance")
+	healthpb.RegisterHealthServer(gsrv, hserv)
 
 	return gsrv, nil
 }
@@ -157,7 +184,7 @@ func (s *grpcServer) AddStore(ctx context.Context, req *api.AddStoreRequest) (*a
 
 	return &api.AddStoreResponse{
 		Ok:    true,
-		Store: MapStoreModelToResponse(store),
+		Store: storeModels.MapStoreModelToResponse(store),
 	}, nil
 }
 
@@ -177,7 +204,7 @@ func (s *grpcServer) GetStore(ctx context.Context, req *api.GetStoreRequest) (*a
 		return nil, st.Err()
 	}
 	return &api.GetStoreResponse{
-		Store: MapStoreModelToResponse(store),
+		Store: storeModels.MapStoreModelToResponse(store),
 	}, nil
 }
 
@@ -232,7 +259,7 @@ func (s *grpcServer) SearchStore(ctx context.Context, req *api.SearchStoreReques
 	}
 
 	return &api.SearchStoreResponse{
-		Stores: MapStoreListToResponse(stores),
+		Stores: storeModels.MapStoreListToResponse(stores),
 		Geo: &api.Point{
 			Latitude:  req.Latitude,
 			Longitude: req.Longitude,
@@ -279,6 +306,19 @@ func (s *grpcServer) StoreUpload(ctx context.Context, req *api.StoreUploadReques
 
 	return &api.StoreUploadResponse{
 		Ok: true,
+	}, nil
+}
+
+func (s *grpcServer) GetServers(ctx context.Context, req *api.GetServersRequest) (*api.GetServersResponse, error) {
+	servers, err := s.Servicer.GetServers(ctx)
+	if err != nil {
+		s.Logger.Error("error completing get servers request", zap.Error(err))
+		st := status.New(codes.NotFound, "error completing get servers request")
+		return nil, st.Err()
+	}
+
+	return &api.GetServersResponse{
+		Servers: servers,
 	}, nil
 }
 

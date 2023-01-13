@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	geoModels "github.com/comfforts/comff-stores/pkg/models/geo"
 )
 
 // At highest resolution, hash should differ for points where
@@ -16,7 +18,7 @@ const (
 )
 
 func TestEncodingResolution(t *testing.T) {
-	points := []Point{
+	points := []geoModels.Point{
 		{0.133333, 117.500000},
 		{-33.918861, 18.423300},
 		{38.294788, -122.461510},
@@ -33,9 +35,9 @@ func TestEncodingResolution(t *testing.T) {
 	}
 }
 func TestEncodingResolutionChange(t *testing.T) {
-	point := Point{42.713456, -79.819675}
+	point := geoModels.Point{42.713456, -79.819675}
 
-	res := map[string][]Point{}
+	res := map[string][]geoModels.Point{}
 
 	n := 0
 	cn := 0
@@ -44,7 +46,7 @@ func TestEncodingResolutionChange(t *testing.T) {
 		hash, _ := Encode(point.Latitude, point.Longitude, 12)
 		_, ok := res[hash]
 		if !ok {
-			res[hash] = []Point{}
+			res[hash] = []geoModels.Point{}
 		}
 		res[hash] = append(res[hash], point)
 		cn++
@@ -53,9 +55,9 @@ func TestEncodingResolutionChange(t *testing.T) {
 		hash, _ = Encode(point.Latitude+0.045, point.Longitude, 12)
 		_, ok = res[hash]
 		if !ok {
-			res[hash] = []Point{}
+			res[hash] = []geoModels.Point{}
 		}
-		res[hash] = append(res[hash], Point{
+		res[hash] = append(res[hash], geoModels.Point{
 			Latitude:  point.Latitude + LATITUDE_RESOLUTION,
 			Longitude: point.Longitude,
 		})
@@ -65,9 +67,9 @@ func TestEncodingResolutionChange(t *testing.T) {
 		hash, _ = Encode(point.Latitude, point.Longitude+0.09, 12)
 		_, ok = res[hash]
 		if !ok {
-			res[hash] = []Point{}
+			res[hash] = []geoModels.Point{}
 		}
-		res[hash] = append(res[hash], Point{
+		res[hash] = append(res[hash], geoModels.Point{
 			Latitude:  point.Latitude,
 			Longitude: point.Longitude + LATITUDE_RESOLUTION,
 		})

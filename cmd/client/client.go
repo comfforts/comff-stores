@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -16,12 +17,12 @@ import (
 )
 
 const SERVICE_PORT = 50051
-const SERVICE_DOMAIN = "192.168.68.100"
+const SERVICE_DOMAIN = "127.0.0.1"
 
 func main() {
 	// initialize app logger instance
 	logCfg := &logging.AppLoggerConfig{
-		FilePath: "logs/client.log",
+		FilePath: filepath.Join("logs", "client.log"),
 		Level:    zapcore.DebugLevel,
 	}
 	logger := logging.NewAppLogger(nil, logCfg)

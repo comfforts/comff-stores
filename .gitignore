@@ -1,23 +1,13 @@
 .DS_Store
-certs
-policies
 
-cmd/store/certs
-cmd/store/creds
-cmd/store/policies
-cmd/store/config.json
-cmd/store/data
-cmd/store/logs
-cmd/store/geo
+*/*/certs
+*/*/creds
+*/*/policies
+*/*/config.json
+*/*/test-config.json
+*/*/data
+*/*/logs
+*/*/geo
 
-cmd/client/certs
-cmd/client/logs
-
-pkg/jobs/creds
-pkg/jobs/test-config.json
-
-pkg/services/filestorage/creds
-pkg/services/filestorage/test-config.json
-
-pkg/services/geocode/creds
-pkg/services/geocode/test-config.json
+*/*/*/creds
+*/*/*/test-config.json
