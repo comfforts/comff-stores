@@ -19,10 +19,10 @@ const (
 
 func TestEncodingResolution(t *testing.T) {
 	points := []geoModels.Point{
-		{0.133333, 117.500000},
-		{-33.918861, 18.423300},
-		{38.294788, -122.461510},
-		{28.644800, 77.216721},
+		{Latitude: 0.133333, Longitude: 117.500000},
+		{Latitude: -33.918861, Longitude: 18.423300},
+		{Latitude: 38.294788, Longitude: -122.461510},
+		{Latitude: 28.644800, Longitude: 77.216721},
 	}
 
 	for _, point := range points {
@@ -35,7 +35,7 @@ func TestEncodingResolution(t *testing.T) {
 	}
 }
 func TestEncodingResolutionChange(t *testing.T) {
-	point := geoModels.Point{42.713456, -79.819675}
+	point := geoModels.Point{Latitude: 42.713456, Longitude: -79.819675}
 
 	res := map[string][]geoModels.Point{}
 

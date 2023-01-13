@@ -10,7 +10,6 @@ RUN adduser --system --uid 1002 comffstore
 
 COPY cmd/cli/build/"$BUILD_OS"_"$BUILD_ARCH"/comffstore ./
 COPY cmd/cli/config.json ./
-COPY cmd/cli/config.yaml ./
 COPY cmd/cli/creds ./creds
 COPY cmd/cli/certs ./certs
 COPY cmd/cli/policies ./policies

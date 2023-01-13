@@ -19,18 +19,6 @@ func TestFileRead(t *testing.T) {
 		2: 0002,
 	}
 	fmt.Println("data: ", datas)
-
-	// var network bytes.Buffer
-	// gob.Register(Mapper{})
-	// enc := gob.NewEncoder(&network)
-	// err := enc.Encode(&datas)
-	// require.NoError(t, err)
-
-	// dec := gob.NewDecoder(&network)
-	// var result Mapper
-	// err = dec.Decode(&result)
-	// require.NoError(t, err)
-
 	fileName := "test-file"
 
 	fi, err := os.Create(fileName)

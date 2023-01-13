@@ -58,7 +58,7 @@ run-docker-test:
 start-agent:
 	@echo "starting agent with latest ${HEAD}"
 	rm -rf cmd/cli/data/raft
-	cd cmd/cli && go run comffstore.go --config-file config.yaml
+	cd cmd/cli && go run comffstore.go --data-dir ./data --bootstrap true
 
 .PHONY: build-agent-exec
 build-agent-exec:
