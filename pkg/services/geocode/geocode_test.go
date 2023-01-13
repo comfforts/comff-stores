@@ -46,19 +46,14 @@ func setupTest(t *testing.T) (
 	require.NoError(t, err)
 
 	gscCfg := appCfg.Services.GeoCodeCfg
+	gscCfg.DataDir = TEST_DIR
 	gsc, err := NewGeoCodeService(gscCfg, csc, appLogger)
 	require.NoError(t, err)
 
 	return gsc, func() {
 		t.Log(" TestGeocoder ended")
 
-		err := os.RemoveAll(gscCfg.DataDir)
-		require.NoError(t, err)
-
 		err = os.RemoveAll(TEST_DIR)
-		require.NoError(t, err)
-
-		err = os.RemoveAll("geo")
 		require.NoError(t, err)
 	}
 }

@@ -246,6 +246,7 @@ func (a *Agent) setupServer() error {
 	}
 
 	a.logger.Info("creating geo coding service instance")
+	appCfg.Services.GeoCodeCfg.DataDir = a.Config.DataDir
 	geoServ, err := geocode.NewGeoCodeService(appCfg.Services.GeoCodeCfg, csc, a.logger)
 	if err != nil {
 		a.logger.Error("error initializing maps client", zap.Error(err))
