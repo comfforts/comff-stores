@@ -8,6 +8,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"path"
 	"path/filepath"
 	"reflect"
 	"sync"
@@ -37,6 +38,8 @@ import (
 type Config struct {
 	ServerTLSConfig *tls.Config
 	PeerTLSConfig   *tls.Config
+	// RunDir is the root directory.
+	RunDir string
 	// DataDir stores the log and raft data.
 	DataDir string
 	// BindAddr is the address serf runs on.
@@ -74,6 +77,10 @@ type Agent struct {
 func NewAgent(config Config) (*Agent, error) {
 	if config.DataDir == "" {
 		return nil, appErrors.NewAppError("missing log data directory configuration")
+	}
+
+	if config.AppConfigFile == "" {
+		config.AppConfigFile = path.Join(config.RunDir, appConfig.CONFIG_FILE_NAME)
 	}
 
 	a := &Agent{
@@ -162,7 +169,9 @@ func (a *Agent) setupDistributedStores() error {
 	cfg.Raft.ElectionTimeout = 20 * time.Millisecond
 	cfg.Raft.LeaderLeaseTimeout = 20 * time.Millisecond
 	cfg.Raft.CommitTimeout = 5 * time.Millisecond
-	cfg.Segment.MaxIndexSize = 500
+	cfg.Raft.SnapshotThreshold = 5
+	cfg.Raft.SnapshotInterval = 10 * time.Second
+	cfg.Segment.MaxIndexSize = 20
 	cfg.Segment.InitialOffset = 1
 
 	cfg.Raft.Bootstrap = a.Config.Bootstrap
@@ -262,6 +271,7 @@ func (a *Agent) setupServer() error {
 	}
 
 	a.logger.Info("initializing store loader instance")
+	appCfg.Jobs.StoreLoaderConfig.DataDir = a.Config.DataDir
 	storeLoader, err := jobs.NewStoreLoader(appCfg.Jobs.StoreLoaderConfig, a.stores, csc, a.logger)
 	if err != nil {
 		a.logger.Error("error creating store loader", zap.Error(err), zap.Any("errorType", reflect.TypeOf(err)))

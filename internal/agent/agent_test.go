@@ -20,7 +20,6 @@ import (
 	testUtils "github.com/comfforts/comff-stores/pkg/utils/test"
 )
 
-const TEST_CACHE_DIR = "geo"
 const TEST_DIR = "test-data"
 
 func TestAgentSingle(t *testing.T) {
@@ -50,6 +49,10 @@ func TestAgentSingle(t *testing.T) {
 	})
 	require.NoError(t, err)
 
+	defer func() {
+		require.NoError(t, os.RemoveAll(TEST_DIR))
+	}()
+
 	servPort := getPort(0)
 	bindAddr := fmt.Sprintf("%s:%d", "127.0.0.1", servPort)
 	rpcPort := getPort(1)
@@ -73,8 +76,6 @@ func TestAgentSingle(t *testing.T) {
 	defer func() {
 		err := agent.Shutdown()
 		require.NoError(t, err)
-		// require.NoError(t, os.RemoveAll(TEST_CACHE_DIR))
-		require.NoError(t, os.RemoveAll(TEST_DIR))
 	}()
 
 	// skip the cycle and wait for bit
