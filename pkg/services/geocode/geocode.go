@@ -66,7 +66,7 @@ func NewGeoCodeService(cfg config.GeoCodeServiceConfig, csc *filestorage.CloudSt
 		cacheFile := filepath.Join(cachePath, fmt.Sprintf("%s.json", cache.CACHE_FILE_NAME))
 		if _, err := fileUtils.FileStats(cacheFile); err != nil {
 			if err := gcSrv.downloadCache(); err != nil {
-				logger.Error("error getting cache from storage", zap.Error(err))
+				logger.Error("error getting cache from storage")
 			}
 		}
 
@@ -221,9 +221,7 @@ func (g *GeoCodeService) downloadCache() error {
 	cacheFile := filepath.Join(cachePath, fmt.Sprintf("%s.json", cache.CACHE_FILE_NAME))
 	var fmod int64
 	fStats, err := fileUtils.FileStats(cacheFile)
-	if err != nil {
-		g.logger.Error("error accessing file", zap.Error(err), zap.String("filepath", cacheFile))
-	} else {
+	if err == nil {
 		fmod := fStats.ModTime().Unix()
 		g.logger.Info("file mod time", zap.Int64("modtime", fmod), zap.String("filepath", cacheFile))
 	}

@@ -74,7 +74,6 @@ func NewCacheService(dataDir string, logger *logging.AppLogger, marshalFn Marsha
 
 	err := cacheService.LoadFile()
 	if err != nil {
-		logger.Error(ERROR_LOADING_CACHE_FILE, zap.Error(err), zap.String("cacheDir", dataDir))
 		logger.Info("starting with fresh cache")
 	}
 

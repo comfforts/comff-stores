@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/comfforts/comff-stores/pkg/config"
 	"github.com/comfforts/comff-stores/pkg/constants"
@@ -81,7 +82,7 @@ func (jd *StoreLoader) ProcessFile(ctx context.Context, filePath string) error {
 }
 
 func (jd *StoreLoader) processingPreCheck(ctx context.Context, filePath string) error {
-	dataPath := fmt.Sprintf("%s/%s", jd.config.DataPath, filePath)
+	dataPath := fmt.Sprintf("%s/%s", jd.config.DataDir, filePath)
 
 	// check if file exists
 	if _, err := fileUtils.FileStats(filePath); err != nil {
@@ -97,8 +98,8 @@ func (jd *StoreLoader) processingPreCheck(ctx context.Context, filePath string) 
 	} else {
 		dataVol := fileUtils.GetRoot(filePath)
 		// if file is not placed in file store, copy file to file store
-		if dataVol != jd.config.DataPath {
-			dataPath := fmt.Sprintf("%s/%s", jd.config.DataPath, filePath)
+		if dataVol != jd.config.DataDir {
+			dataPath := fmt.Sprintf("%s/%s", jd.config.DataDir, filePath)
 			_, err := fileUtils.FileStats(dataPath)
 			if err != nil {
 				jd.logger.Info("copying file", zap.String("src", filePath), zap.String("dest", dataPath))
@@ -128,7 +129,7 @@ func (jd *StoreLoader) queueFileStreaming(
 ) {
 	jd.logger.Info("start reading store data file")
 	fp := ctx.Value(constants.FilePathContextKey).(string)
-	resultStream, err := jd.localStorage.ReadFileArray(ctx, cancel, filepath.Join(jd.config.DataPath, fp))
+	resultStream, err := jd.localStorage.ReadFileArray(ctx, cancel, filepath.Join(jd.config.DataDir, fp))
 	if err != nil {
 		jd.logger.Error("error reading store data file", zap.Error(err))
 		cancel()
@@ -205,7 +206,7 @@ func (jd *StoreLoader) addStore(ctx context.Context, s *storeModels.Store) (*sto
 		fileName := filepath.Base(ctx.Value(constants.FilePathContextKey).(string))
 		s.Org = fileName[0:strings.Index(fileName, ".")]
 	}
-	// time.Sleep(50 * time.Millisecond)
+	time.Sleep(50 * time.Millisecond)
 	return jd.stores.AddStore(ctx, s)
 }
 
@@ -269,7 +270,7 @@ func (jd *StoreLoader) getFromStorage(ctx context.Context, filePath string) erro
 }
 
 func (jd *StoreLoader) StoreDataFile(ctx context.Context, filePath string) error {
-	dataPath := filepath.Join(jd.config.DataPath, filePath)
+	dataPath := filepath.Join(jd.config.DataDir, filePath)
 	file, err := jd.stores.Reader(ctx, dataPath)
 	if err != nil {
 		jd.logger.Error("error saving data file", zap.Error(err), zap.String("filepath", filePath))
@@ -285,7 +286,7 @@ func (jd *StoreLoader) StoreDataFile(ctx context.Context, filePath string) error
 }
 
 func (jd *StoreLoader) UploadDataFile(ctx context.Context, filePath string) error {
-	dataPath := filepath.Join(jd.config.DataPath, filePath)
+	dataPath := filepath.Join(jd.config.DataDir, filePath)
 	fStats, err := fileUtils.FileStats(dataPath)
 	if err != nil {
 		jd.logger.Error("error accessing file", zap.Error(err), zap.String("filepath", filePath))

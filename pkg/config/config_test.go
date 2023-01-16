@@ -29,7 +29,7 @@ func TestGetConfig(t *testing.T) {
 	require.Equal(t, "mustum-geo", config.Services.GeoCodeCfg.BucketName)
 	require.Equal(t, false, config.Services.GeoCodeCfg.Cached)
 
-	require.Equal(t, "data", config.Jobs.StoreLoaderConfig.DataPath)
+	require.Equal(t, "data", config.Jobs.StoreLoaderConfig.DataDir)
 	require.Equal(t, "mustum-store", config.Jobs.StoreLoaderConfig.BucketName)
 
 	err = removeConfigFile()

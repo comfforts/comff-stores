@@ -72,7 +72,7 @@ func setupStoreLoader(t *testing.T, testDir string) (
 		err := os.RemoveAll(testDir)
 		require.NoError(t, err)
 
-		err = os.RemoveAll(slCfg.DataPath)
+		err = os.RemoveAll(slCfg.DataDir)
 		require.NoError(t, err)
 	}
 }
