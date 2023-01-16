@@ -1,0 +1,20 @@
+version: "3"
+services:
+  stores:
+    image: github.com/comfforts/comff-stores:0.0.2
+    volumes:
+      - comff-stores-certs:/comffstores/certs:ro
+      - comff-stores-creds:/comffstores/creds:ro
+      - comff-stores-policies:/comffstores/policies:ro
+      - comff-stores-cache:/comffstores/data/geo:rw
+    ports:
+      - "50051:50051"
+volumes:
+  comff-stores-certs:
+    external: true
+  comff-stores-creds:
+    external: true
+  comff-stores-policies:
+    external: true
+  comff-stores-cache:
+    external: true

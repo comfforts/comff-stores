@@ -2,6 +2,9 @@
 README.md
 .gitignore
 
+cmd/cli/logs
+cmd/cli/data
+
 cmd/store/logs
 cmd/store/geo
 cmd/store/data

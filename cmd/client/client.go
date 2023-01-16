@@ -47,13 +47,29 @@ func main() {
 	defer conn.Close()
 
 	client := api.NewStoresClient(conn)
+	testGetServers(client, logger)
 
-	ok := testStoreUpload(client, logger)
-	if ok {
-		testSearchStore(client, logger)
+	// ok := testStoreUpload(client, logger)
+	// if ok {
+	// 	testSearchStore(client, logger)
 
-		id := testAddStore(client, logger)
-		testGetStore(client, logger, id)
+	// 	id := testAddStore(client, logger)
+	// 	testGetStore(client, logger, id)
+	// }
+}
+
+func testGetServers(client api.StoresClient, logger *logging.AppLogger) {
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	req := &api.GetServersRequest{}
+	resp, err := client.GetServers(ctx, req)
+	if err != nil {
+		logger.Fatal("error getting servers", zap.Error(err))
+	}
+	for k, v := range resp.Servers {
+		logger.Info("Server response", zap.Any("num", k), zap.Any("server", v))
 	}
 }
 
