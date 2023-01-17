@@ -16,6 +16,11 @@ WORKDIR /comffstores
 COPY --from=build /go/bin/comffstore ./
 COPY --from=build /go/src/comffstore/cmd/cli/config.json ./
 
+COPY --from=build /go/src/comffstore/cmd/cli/certs ./certs
+COPY --from=build /go/src/comffstore/cmd/cli/creds ./creds
+COPY --from=build /go/src/comffstore/cmd/cli/policies ./policies
+COPY --from=build /go/src/comffstore/cmd/cli/data/geo ./data/geo
+
 COPY --from=build /go/bin/grpc_health_probe /bin/grpc_health_probe
 
 EXPOSE 50051

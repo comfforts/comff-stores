@@ -385,6 +385,7 @@ func (a *Agent) setupMembership() error {
 }
 
 func (a *Agent) serve() error {
+	a.logger.Info("agent will start serving", zap.String("bindAddr", a.BindAddr), zap.Int("rpcPort", a.RPCPort))
 	if err := a.mux.Serve(); err != nil {
 		_ = a.Shutdown()
 		return err

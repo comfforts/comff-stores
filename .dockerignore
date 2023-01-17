@@ -2,8 +2,9 @@
 README.md
 .gitignore
 
-cmd/cli/logs
-cmd/cli/data
+cmd/cli/data/logs
+cmd/cli/data/raft
+cmd/cli/data/data
 
 cmd/store/logs
 cmd/store/geo
