@@ -42,13 +42,15 @@ func newSegmenter(dir string, baseOffset uint64, c Config) (*segmenter, error) {
 		filerFile, err = os.Create(fPath)
 	} else {
 		filerFile, err = os.Open(fPath)
-		log.Printf("opened existing filer: %s", fPath)
+		log.Printf("segmenter.newSegmenter() - opened existing filer file: %s", fPath)
 	}
 	if err != nil {
+		log.Printf("segmenter.newSegmenter() - error initializing filer file, err: %v", err)
 		return nil, errors.WrapError(err, ERROR_OPENING_FILER, fPath)
 	}
 
 	if s.filer, err = newFiler(filerFile); err != nil {
+		log.Printf("segmenter.newSegmenter() - error creating filer, err: %v", err)
 		return nil, err
 	}
 
@@ -59,16 +61,18 @@ func newSegmenter(dir string, baseOffset uint64, c Config) (*segmenter, error) {
 		indexFile, err = os.Create(iPath)
 	} else {
 		indexFile, err = os.Open(iPath)
-		log.Printf("opened existing index: %s", iPath)
+		log.Printf("segmenter.newSegmenter() - opened existing indexer file: %s", iPath)
 	}
 	if err != nil {
+		log.Printf("segmenter.newSegmenter() - error initializing indexer file, err: %v", err)
 		return nil, errors.WrapError(err, ERROR_OPENING_INDEX, iPath)
 	}
 
 	if s.indexer, err = newIndexer(indexFile, c); err != nil {
+		log.Printf("segmenter.newSegmenter() - error creating indexer, err: %v", err)
 		return nil, err
 	}
-	log.Printf("indexer size: %d", s.indexer.size)
+	log.Printf("segmenter.newSegmenter() - indexer size: %d", s.indexer.size)
 	if off, _, err := s.indexer.Read(-1); err != nil {
 		s.nextOffset = baseOffset
 	} else {
@@ -79,6 +83,7 @@ func newSegmenter(dir string, baseOffset uint64, c Config) (*segmenter, error) {
 
 func (s *segmenter) Append(record *api.Record) (offset uint64, err error) {
 	if s.IsMaxed() {
+		log.Printf("segmenter.Append() - segment is maxed out, baseoffset: %d, nextoffset: %d, indexer size: %d", s.baseOffset, s.nextOffset, s.indexer.size)
 		return 0, io.EOF
 	}
 
@@ -87,11 +92,13 @@ func (s *segmenter) Append(record *api.Record) (offset uint64, err error) {
 
 	p, err := proto.Marshal(record)
 	if err != nil {
+		log.Printf("segmenter.Append() - error marshalling record, error: %v", err)
 		return 0, errors.WrapError(err, ERROR_MARSHALLING_RECORD)
 	}
 
 	_, pos, err := s.filer.Append(p)
 	if err != nil {
+		log.Printf("segmenter.Append() - error appending record to filer, error: %v", err)
 		return 0, err
 	}
 	if err = s.indexer.Write(
@@ -99,6 +106,7 @@ func (s *segmenter) Append(record *api.Record) (offset uint64, err error) {
 		uint32(s.nextOffset-uint64(s.baseOffset)),
 		pos,
 	); err != nil {
+		log.Printf("segmenter.Append() - error indexing, error: %v", err)
 		return 0, err
 	}
 	s.nextOffset++
@@ -108,15 +116,35 @@ func (s *segmenter) Append(record *api.Record) (offset uint64, err error) {
 func (s *segmenter) Read(off uint64) (*api.Record, error) {
 	_, pos, err := s.indexer.Read(int64(off - s.baseOffset))
 	if err != nil {
+		log.Printf("segmenter.Read() - error reading index, error: %v", err)
 		return nil, err
 	}
-	log.Printf("reading position: %d", pos)
+
+	if s.closed {
+		file, err := os.Open(s.filer.Name())
+		if err != nil {
+			log.Printf("segmenter.Read() - error opening existing filer file: %s, error: %v", s.filer.Name(), err)
+			return nil, err
+		}
+
+		s.filer, err = newFiler(file)
+		if err != nil {
+			log.Printf("segmenter.Read() - error creating filer with existing file: %s, error: %v", s.filer.Name(), err)
+			return nil, err
+		}
+		log.Printf("segmenter.Read() - reopened closed filer")
+	}
+	log.Printf("segmenter.Read() - reading position: %d", pos)
 	p, err := s.filer.Read(pos)
 	if err != nil {
+		log.Printf("segmenter.Read() - error reading position from filer, error: %v", err)
 		return nil, err
 	}
 	record := &api.Record{}
 	err = proto.Unmarshal(p, record)
+	if err != nil {
+		log.Printf("segmenter.Read() - error unmarshalling record, error: %v", err)
+	}
 	return record, err
 }
 
@@ -125,11 +153,13 @@ func (s *segmenter) IsMaxed() bool {
 }
 
 func (s *segmenter) Close() error {
-	log.Printf("closing segmenter - offset - base: %d, next: %d", s.baseOffset, s.nextOffset)
+	log.Printf("segmenter.Close() - closing segmenter - offset - base: %d, next: %d", s.baseOffset, s.nextOffset)
 	if err := s.indexer.Close(); err != nil {
+		log.Printf("segmenter.Close() - error closing indexer, error: %v", err)
 		return err
 	}
 	if err := s.filer.Close(); err != nil {
+		log.Printf("segmenter.Close() - error closing filer, error: %v", err)
 		return err
 	}
 	s.closed = true
@@ -139,13 +169,16 @@ func (s *segmenter) Close() error {
 func (s *segmenter) Remove() error {
 	if !s.Closed() {
 		if err := s.Close(); err != nil {
+			log.Printf("segmenter.Remove() - error removing segmenter")
 			return err
 		}
 	}
 	if err := os.Remove(s.indexer.Name()); err != nil {
+		log.Printf("segmenter.Remove() - error removing segmenter indexer file")
 		return errors.WrapError(err, ERROR_REMOVING_INDEX, s.indexer.Name())
 	}
 	if err := os.Remove(s.filer.Name()); err != nil {
+		log.Printf("segmenter.Remove() - error removing segmenter filer file")
 		return errors.WrapError(err, ERROR_REMOVING_FILER, s.filer.Name())
 	}
 	return nil

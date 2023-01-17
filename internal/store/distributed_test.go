@@ -31,8 +31,11 @@ func TestMultipleNodes(t *testing.T) {
 	}()
 
 	getConfig := func(ln net.Listener, dataDir string, id int) Config {
-		config := Config{}
-		config.Raft.StreamLayer = NewStreamLayer(ln, nil, nil)
+		logger := logging.NewTestAppLogger(dataDir)
+		config := Config{
+			Logger: logger,
+		}
+		config.Raft.StreamLayer = NewStreamLayer(ln, nil, nil, logger)
 		config.Raft.LocalID = raft.ServerID(fmt.Sprintf("%d", id))
 		config.Raft.HeartbeatTimeout = 500 * time.Millisecond
 		config.Raft.ElectionTimeout = 500 * time.Millisecond
@@ -41,8 +44,6 @@ func TestMultipleNodes(t *testing.T) {
 		config.Segment.MaxIndexSize = 10
 		config.Segment.InitialOffset = 1
 		config.Raft.BindAddr = ln.Addr().String()
-
-		config.Logger = logging.NewTestAppLogger(dataDir)
 
 		if id == 0 {
 			config.Raft.Bootstrap = true

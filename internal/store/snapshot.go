@@ -17,11 +17,17 @@ type snapshot struct {
 
 func (s *snapshot) Persist(sink raft.SnapshotSink) error {
 	if _, err := io.Copy(sink, s.reader); err != nil {
-		_ = sink.Cancel()
 		s.logger.Error("error persisting snapshot", zap.Error(err))
+		erro := sink.Cancel()
+		s.logger.Error("error canceling snapshot sink", zap.Error(erro))
 		return err
 	}
-	return sink.Close()
+	err := sink.Close()
+	if err != nil {
+		s.logger.Error("error closing snapshot sink", zap.Error(err))
+		return err
+	}
+	return nil
 }
 
 func (s *snapshot) Release() {

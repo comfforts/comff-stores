@@ -44,6 +44,7 @@ func NewRecorder(dir string, c Config) (*Recorder, error) {
 func (r *Recorder) setup() error {
 	files, err := os.ReadDir(r.Dir)
 	if err != nil {
+		log.Printf("recorder.setup() - error reading direcotry, %s", r.Dir)
 		return err
 	}
 	var baseOffsets []uint64
@@ -60,6 +61,7 @@ func (r *Recorder) setup() error {
 	})
 	for i := 0; i < len(baseOffsets); i++ {
 		if err = r.newSegmenter(baseOffsets[i]); err != nil {
+			log.Printf("recorder.setup() - error creating segment with baseoffset %d", baseOffsets[i])
 			return err
 		}
 		// baseOffset contains dup for index and store so we skip
@@ -67,8 +69,9 @@ func (r *Recorder) setup() error {
 		i++
 	}
 	if r.segments == nil {
-		log.Printf("setup() - initializing segments, InitialOffset: %d", r.Config.Segment.InitialOffset)
+		log.Printf("recorder.setup() - initializing segment, initial offset: %d", r.Config.Segment.InitialOffset)
 		if err = r.newSegmenter(r.Config.Segment.InitialOffset); err != nil {
+			log.Printf("recorder.setup() - error initializing segment, initial offset %d", r.Config.Segment.InitialOffset)
 			return err
 		}
 	}
@@ -76,9 +79,10 @@ func (r *Recorder) setup() error {
 }
 
 func (r *Recorder) newSegmenter(off uint64) error {
-	log.Printf("newSegmenter() - creating new segment, offset: %d", off)
+	log.Printf("recorder.newSegmenter() - creating new segment, offset: %d", off)
 	s, err := newSegmenter(r.Dir, off, r.Config)
 	if err != nil {
+		log.Printf("recorder.newSegmenter() - error creating new segment, offset: %d, error: %v", off, err)
 		return err
 	}
 	r.segments = append(r.segments, s)
@@ -94,11 +98,15 @@ func (r *Recorder) Append(record *api.Record) (uint64, error) {
 	defer r.mu.Unlock()
 	off, err := r.activeSegment.Append(record)
 	if err != nil {
+		log.Printf("recorder.Append() - error appending record, offset: %d, error: %v", off, err)
 		return 0, err
 	}
-	log.Printf("Append() - appended record, offset: %d", off)
+	log.Printf("recorder.Append() - appended record, offset: %d", off)
 	if r.activeSegment.IsMaxed() {
 		err = r.newSegmenter(off + 1)
+	}
+	if err != nil {
+		log.Printf("recorder.Append() - error appending record, offset: %d, error: %v", off, err)
 	}
 	return off, err
 }
@@ -107,31 +115,29 @@ func (r *Recorder) Read(off uint64) (*api.Record, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	var s *segmenter
-	log.Printf("Read() - read offset: %d", off)
-	log.Printf("Read() - has segments: %v", len(r.segments))
+	log.Printf("recorder.Read() - read offset: %d, has segments: %d", off, len(r.segments))
 	for _, segment := range r.segments {
-		log.Printf("Read() - segment base offset: %d", segment.baseOffset)
-		log.Printf("Read() - segment nextOffset: %d", segment.nextOffset)
 		if segment.baseOffset <= off && off < segment.nextOffset {
 			s = segment
 			break
 		}
 	}
 	if s == nil || s.nextOffset <= off {
-		log.Printf("Read() - segmenter: %v", s)
-		log.Printf("Read() - segments: %v", r.segments)
+		log.Printf("recorder.Read() - nil segment or out of bounds ofset, segmenter: %v, segments: %d", s, len(r.segments))
 		return nil, errors.NewAppError(ERROR_OFFSET_OUT_OF_RANGE, off)
 	}
+	log.Printf("recorder.Read() - read segment's base offset: %d, nextOffset: %d", s.baseOffset, s.nextOffset)
 	return s.Read(off)
 }
 
 func (r *Recorder) Close() error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	log.Printf("Close() - closing recorder")
+	log.Printf("recorder.Close() - closing recorder")
 	for _, segment := range r.segments {
 		if !segment.Closed() {
 			if err := segment.Close(); err != nil {
+				log.Printf("recorder.Close() - error closing recorder, err: %v", err)
 				return err
 			}
 		}
@@ -141,6 +147,7 @@ func (r *Recorder) Close() error {
 
 func (r *Recorder) Remove() error {
 	if err := r.Close(); err != nil {
+		log.Printf("recorder.Remove() - error removing recorder")
 		return err
 	}
 	return os.RemoveAll(r.Dir)
@@ -148,6 +155,7 @@ func (r *Recorder) Remove() error {
 
 func (r *Recorder) Reset() error {
 	if err := r.Remove(); err != nil {
+		log.Printf("recorder.Reset() - error resetting recorder")
 		return err
 	}
 	return r.setup()
@@ -176,6 +184,7 @@ func (r *Recorder) Truncate(lowest uint64) error {
 	for _, s := range r.segments {
 		if s.nextOffset <= lowest+1 {
 			if err := s.Remove(); err != nil {
+				log.Printf("recorder.Truncate() - error truncating recorder")
 				return err
 			}
 			continue

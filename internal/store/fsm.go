@@ -20,6 +20,7 @@ import (
 var _ raft.FSM = (*fsm)(nil)
 
 type fsm struct {
+	DataDir      string
 	StoreService storeModels.Stores
 	logger       *logging.AppLogger
 }
@@ -62,7 +63,7 @@ func (fs *fsm) applyAddStore(b []byte) interface{} {
 
 func (fs *fsm) Snapshot() (raft.FSMSnapshot, error) {
 	ctx := context.Background()
-	r, err := fs.StoreService.Reader(ctx, "")
+	r, err := fs.StoreService.Reader(ctx, fs.DataDir)
 	if err != nil {
 		return nil, err
 	}

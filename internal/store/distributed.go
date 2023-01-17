@@ -79,6 +79,7 @@ func (ds *DistributedStores) setupStores(dataDir string) {
 
 func (ds *DistributedStores) setupRaft(dataDir string) error {
 	fsm := &fsm{
+		DataDir:      dataDir,
 		StoreService: ds.stores,
 		logger:       ds.config.Logger,
 	}
@@ -140,6 +141,12 @@ func (ds *DistributedStores) setupRaft(dataDir string) error {
 	}
 	if ds.config.Raft.CommitTimeout != 0 {
 		config.CommitTimeout = ds.config.Raft.CommitTimeout
+	}
+	if ds.config.Raft.SnapshotInterval != 0 {
+		config.SnapshotInterval = ds.config.Raft.SnapshotInterval
+	}
+	if ds.config.Raft.SnapshotThreshold != 0 {
+		config.SnapshotThreshold = ds.config.Raft.SnapshotThreshold
 	}
 
 	ds.config.Logger.Info("creating raft node")
@@ -316,8 +323,8 @@ func (ds *DistributedStores) WaitForLeader(timeout time.Duration) error {
 	}
 }
 
-func (ds *DistributedStores) Reader(ctx context.Context, filePath string) (*os.File, error) {
-	return ds.stores.Reader(ctx, filePath)
+func (ds *DistributedStores) Reader(ctx context.Context, dataDir string) (*os.File, error) {
+	return ds.stores.Reader(ctx, dataDir)
 }
 
 func (ds *DistributedStores) GetServers(ctx context.Context) ([]*api.Server, error) {

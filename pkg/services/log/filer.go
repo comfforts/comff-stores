@@ -3,6 +3,7 @@ package log
 import (
 	"bufio"
 	"encoding/binary"
+	"log"
 	"os"
 	"sync"
 
@@ -38,6 +39,7 @@ type filer struct {
 func newFiler(f *os.File) (*filer, error) {
 	fs, err := os.Stat(f.Name())
 	if err != nil {
+		log.Printf("filer.newFiler() - error getting filer file stats, error: %v", err)
 		return nil, errors.WrapError(err, ERROR_NO_FILE, f.Name())
 	}
 	size := uint64(fs.Size())
@@ -57,12 +59,14 @@ func (f *filer) Append(record []byte) (n uint64, pos uint64, err error) {
 
 	// append record length
 	if err := binary.Write(f.buf, ENCODING, uint64(len(record))); err != nil {
+		log.Printf("filer.Append() - error appending record, error: %v", err)
 		return 0, 0, errors.WrapError(err, ERROR_REC_LEN_APPEND, f.Name())
 	}
 
 	// append record
 	w, err := f.buf.Write(record)
 	if err != nil {
+		log.Printf("filer.Append() - error writing buffer, error: %v", err)
 		return 0, 0, errors.WrapError(err, ERROR_REC_APPEND, f.Name())
 	}
 
@@ -81,18 +85,21 @@ func (f *filer) Read(pos uint64) ([]byte, error) {
 
 	// flush buffer for any unwritten record
 	if err := f.buf.Flush(); err != nil {
+		log.Printf("filer.Read() - error flushing file buffer, err: %v", err)
 		return nil, errors.WrapError(err, ERROR_BUFFER, f.Name())
 	}
 
 	// read record length
 	size := make([]byte, RECORD_LENGTH_WIDTH)
 	if _, err := f.File.ReadAt(size, int64(pos)); err != nil {
+		log.Printf("filer.Read() - error reading record length, error: %v", err)
 		return nil, errors.WrapError(err, ERROR_REC_LEN_READ, f.Name())
 	}
 
 	// read record
 	b := make([]byte, ENCODING.Uint64(size))
 	if _, err := f.File.ReadAt(b, int64(pos+RECORD_LENGTH_WIDTH)); err != nil {
+		log.Printf("filer.Read() - error reading record, error: %v", err)
 		return nil, errors.WrapError(err, ERROR_REC_READ, f.Name())
 	}
 	return b, nil
@@ -103,6 +110,7 @@ func (f *filer) ReadAt(p []byte, off int64) (int, error) {
 	defer f.mu.Unlock()
 
 	if err := f.buf.Flush(); err != nil {
+		log.Printf("filer.Read() - error flushing buffer, error: %v", err)
 		return 0, errors.WrapError(err, ERROR_BUFFER, f.Name())
 	}
 	return f.File.ReadAt(p, off)
@@ -114,6 +122,7 @@ func (f *filer) Close() error {
 
 	err := f.buf.Flush()
 	if err != nil {
+		log.Printf("filer.Close() - error flushing buffer, error: %v", err)
 		return errors.WrapError(err, ERROR_BUFFER, f.Name())
 	}
 	return f.File.Close()

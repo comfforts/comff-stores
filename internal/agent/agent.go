@@ -55,6 +55,32 @@ type Config struct {
 	Bootstrap     bool
 	// Application config file path.
 	AppConfigFile string
+	// HeartbeatTimeout specifies the time in follower state without contact
+	// from a leader before we attempt an election.
+	HeartbeatTimeout time.Duration
+	// ElectionTimeout specifies the time in candidate state without contact
+	// from a leader before we attempt an election.
+	ElectionTimeout time.Duration
+	// SnapshotInterval controls how often we check if we should perform a
+	// snapshot. We randomly stagger between this value and 2x this value to avoid
+	// the entire cluster from performing a snapshot at once. The value passed
+	// here is the initial setting used. This can be tuned during operation using
+	// ReloadConfig.
+	SnapshotInterval time.Duration
+	// SnapshotThreshold controls how many outstanding logs there must be before
+	// we perform a snapshot. This is to prevent excessive snapshotting by
+	// replaying a small set of logs instead. The value passed here is the initial
+	// setting used. This can be tuned during operation using ReloadConfig.
+	SnapshotThreshold uint64
+	// LeaderLeaseTimeout is used to control how long the "lease" lasts
+	// for being the leader without being able to contact a quorum
+	// of nodes. If we reach this interval without contact, we will
+	// step down as leader.
+	LeaderLeaseTimeout time.Duration
+	// MaxIndexSize specifies the maximum number of entries in a segment.
+	MaxIndexSize uint64
+	// InitialOffset specifies the starting offset
+	InitialOffset uint64
 }
 
 type Agent struct {
@@ -156,6 +182,7 @@ func (a *Agent) setupDistributedStores() error {
 		raftLn,
 		a.Config.ServerTLSConfig,
 		a.Config.PeerTLSConfig,
+		a.logger,
 	)
 
 	rpcAddr, err := a.Config.RPCAddr()
@@ -165,16 +192,37 @@ func (a *Agent) setupDistributedStores() error {
 	cfg.Raft.BindAddr = rpcAddr
 	cfg.Raft.LocalID = raft.ServerID(a.Config.NodeName)
 
-	cfg.Raft.HeartbeatTimeout = 20 * time.Millisecond
-	cfg.Raft.ElectionTimeout = 20 * time.Millisecond
-	cfg.Raft.LeaderLeaseTimeout = 20 * time.Millisecond
-	cfg.Raft.CommitTimeout = 5 * time.Millisecond
-	cfg.Raft.SnapshotThreshold = 5
-	cfg.Raft.SnapshotInterval = 10 * time.Second
-	cfg.Segment.MaxIndexSize = 20
-	cfg.Segment.InitialOffset = 1
-
 	cfg.Raft.Bootstrap = a.Config.Bootstrap
+
+	cfg.Raft.CommitTimeout = 5 * time.Millisecond
+	cfg.Raft.HeartbeatTimeout = 20 * time.Millisecond
+	if a.Config.HeartbeatTimeout > 0 {
+		cfg.Raft.HeartbeatTimeout = a.Config.HeartbeatTimeout
+	}
+	cfg.Raft.ElectionTimeout = 20 * time.Millisecond
+	if a.Config.ElectionTimeout > 0 {
+		cfg.Raft.ElectionTimeout = a.Config.ElectionTimeout
+	}
+	cfg.Raft.LeaderLeaseTimeout = 20 * time.Millisecond
+	if a.Config.LeaderLeaseTimeout > 0 {
+		cfg.Raft.LeaderLeaseTimeout = a.Config.LeaderLeaseTimeout
+	}
+	cfg.Raft.SnapshotThreshold = 5
+	if a.Config.SnapshotThreshold > 0 {
+		cfg.Raft.SnapshotThreshold = a.Config.SnapshotThreshold
+	}
+	cfg.Raft.SnapshotInterval = 5 * time.Second
+	if a.Config.SnapshotInterval > 0 {
+		cfg.Raft.SnapshotInterval = a.Config.SnapshotInterval
+	}
+	cfg.Segment.MaxIndexSize = 20
+	if a.Config.MaxIndexSize > 0 {
+		cfg.Segment.MaxIndexSize = a.Config.MaxIndexSize
+	}
+	cfg.Segment.InitialOffset = 1
+	if a.Config.InitialOffset > 0 {
+		cfg.Segment.InitialOffset = a.Config.InitialOffset
+	}
 	cfg.Logger = a.logger
 
 	a.logger.Info("building distributed store instance")

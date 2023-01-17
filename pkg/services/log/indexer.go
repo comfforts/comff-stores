@@ -43,6 +43,7 @@ func newIndexer(f *os.File, c Config) (*indexer, error) {
 	}
 	fi, err := os.Stat(f.Name())
 	if err != nil {
+		log.Printf("indexer.newIndexer() - error getting file stats, error: %v", err)
 		return nil, errors.WrapError(err, ERROR_NO_FILE, f.Name())
 	}
 
@@ -52,6 +53,7 @@ func newIndexer(f *os.File, c Config) (*indexer, error) {
 		decoder := gob.NewDecoder(f)
 		err = decoder.Decode(&idx.mapper)
 		if err != nil {
+			log.Printf("indexer.newIndexer() - error decoding index file, error: %v", err)
 			return nil, errors.WrapError(err, ERROR_DECODING_INDEX_FILE, f.Name())
 		}
 		idx.size = uint64(len(idx.mapper) - 1)
@@ -66,7 +68,8 @@ func (i *indexer) Write(off uint32, pos uint64) error {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 
-	if off > uint32(i.size) {
+	if off > uint32(i.size)+1 {
+		log.Printf("indexer.Write() - error offset greater than index size, returning io.EOF, offset: %d, index size: %d", off, i.size)
 		// TOCHECK should return specific error, rather than io.EOF error?
 		return io.EOF
 	}
@@ -86,6 +89,7 @@ func (i *indexer) Read(inOff int64) (outOff uint32, pos uint64, err error) {
 
 	// new index, return io.EOF error as signal for segment to initalize with baseoffset
 	if i.size == 0 {
+		log.Printf("indexer.Read() - index size is zero, returning io.EOF")
 		return 0, 0, io.EOF
 	}
 
@@ -97,6 +101,7 @@ func (i *indexer) Read(inOff int64) (outOff uint32, pos uint64, err error) {
 
 	if outOff > uint32(i.size) {
 		// TOCHECK should return specific error, rather than io.EOF error?
+		log.Printf("indexer.Read() - error offset greater than index size, returning io.EOF, offset: %d, index size: %d", outOff, i.size)
 		return 0, 0, io.EOF
 	}
 
@@ -112,16 +117,19 @@ func (i *indexer) Close() error {
 
 	fi, err := os.Create(i.Name())
 	if err != nil {
+		log.Printf("indexer.Close() - error creating index file, error: %v", err)
 		return errors.WrapError(err, ERROR_ENCODING_INDEX_FILE, i.Name())
 	}
 	encoder := gob.NewEncoder(fi)
 	err = encoder.Encode(&i.mapper)
 	if err != nil {
+		log.Printf("indexer.Close() - error encoding index data, error: %v", err)
 		return errors.WrapError(err, ERROR_ENCODING_INDEX_FILE, i.Name())
 	}
 
 	fs, err := os.Stat(fi.Name())
 	if err != nil {
+		log.Printf("indexer.Close() - error getting index file stats, error: %v", err)
 		return errors.WrapError(err, ERROR_NO_FILE, fi.Name())
 	}
 

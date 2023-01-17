@@ -16,7 +16,8 @@
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            "program": "cmd/cli/main.go"
+            "program": "cmd/cli/comffstore.go",
+            "args": ["--data-dir", "data", "--bootstrap", "true"]
         },
         {
             "name": "Launch Store",

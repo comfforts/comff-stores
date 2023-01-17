@@ -16,7 +16,7 @@ type Stores interface {
 	AddStore(ctx context.Context, s *Store) (*Store, error)
 	GetStore(ctx context.Context, id string) (*Store, error)
 	GetStoresForGeoPoint(ctx context.Context, lat, long float64, dist int) ([]*StoreGeo, error)
-	Reader(ctx context.Context, filePath string) (*os.File, error)
+	Reader(ctx context.Context, dataDir string) (*os.File, error)
 	GetStoreStats() StoreStats
 	SetReady(ctx context.Context, ready bool)
 	Close() error

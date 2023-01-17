@@ -166,7 +166,7 @@ func (ss *StoreService) Close() error {
 	return nil
 }
 
-func (ss *StoreService) Reader(ctx context.Context, filePath string) (*os.File, error) {
+func (ss *StoreService) Reader(ctx context.Context, dataDir string) (*os.File, error) {
 	stores := ss.GetAllStores()
 	data := []fileModels.JSONMapper{}
 	for _, v := range stores {
@@ -182,9 +182,7 @@ func (ss *StoreService) Reader(ctx context.Context, filePath string) (*os.File, 
 		})
 	}
 
-	if filePath == "" {
-		filePath = filepath.Join("data", "stores.json")
-	}
+	filePath := filepath.Join(dataDir, "data", "stores.json")
 
 	err := fileUtils.CreateDirectory(filePath)
 	if err != nil {
