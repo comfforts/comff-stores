@@ -6,7 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/comfforts/comff-stores/pkg/logging"
+	"github.com/comfforts/logger"
+
 	"github.com/hashicorp/serf/serf"
 	"github.com/stretchr/testify/require"
 )
@@ -93,7 +94,7 @@ func setupMember(t *testing.T, members []*Membership, h *handler) []*Membership 
 
 	dataDir := filepath.Join(TEST_DIR, fmt.Sprintf("node-%d/", len(members)))
 
-	c.Logger = logging.NewTestAppLogger(dataDir)
+	c.Logger = logger.NewTestAppLogger(dataDir)
 
 	if len(members) == 0 {
 		h.joins = make(chan map[string]string, 3)

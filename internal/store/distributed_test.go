@@ -9,11 +9,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/comfforts/logger"
 	"github.com/hashicorp/raft"
 	"github.com/stretchr/testify/require"
 	"github.com/travisjeffery/go-dynaport"
 
-	"github.com/comfforts/comff-stores/pkg/logging"
 	testUtils "github.com/comfforts/comff-stores/pkg/utils/test"
 )
 
@@ -31,7 +31,7 @@ func TestMultipleNodes(t *testing.T) {
 	}()
 
 	getConfig := func(ln net.Listener, dataDir string, id int) Config {
-		logger := logging.NewTestAppLogger(dataDir)
+		logger := logger.NewTestAppLogger(dataDir)
 		config := Config{
 			Logger: logger,
 		}

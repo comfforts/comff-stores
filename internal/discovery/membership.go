@@ -3,7 +3,8 @@ package discovery
 import (
 	"net"
 
-	"github.com/comfforts/comff-stores/pkg/logging"
+	"github.com/comfforts/logger"
+
 	"github.com/hashicorp/raft"
 	"github.com/hashicorp/serf/serf"
 	"go.uber.org/zap"
@@ -14,7 +15,7 @@ type Config struct {
 	BindAddr      string
 	Tags          map[string]string
 	PeerNodeAddrs []string
-	Logger        *logging.AppLogger
+	Logger        logger.AppLogger
 }
 
 type Handler interface {

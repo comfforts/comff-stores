@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/comfforts/comff-stores/pkg/logging"
+	"github.com/comfforts/logger"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -39,7 +39,7 @@ func setupStoreTest(t *testing.T) (
 ) {
 	t.Helper()
 
-	appLogger := logging.NewTestAppLogger(TEST_DIR)
+	appLogger := logger.NewTestAppLogger(TEST_DIR)
 	ss = NewStoreService(appLogger)
 
 	return ss, func() {
@@ -134,8 +134,7 @@ func testAddStoreGetStore(t *testing.T, ss *StoreService) {
 // }
 
 // func TestAddStoreGetStats(t *testing.T) {
-// 	logger := zaptest.NewLogger(t)
-// 	appLogger := logging.NewAppLogger(logger, nil)
+// 	appLogger := logging.NewTestAppLogger(TEST_DIR)
 // 	css := NewStoreService(appLogger)
 
 // 	storeId, name, org, city := "1", "Plaza Hollywood", "starbucks", "Hong Kong"
@@ -146,8 +145,7 @@ func testAddStoreGetStore(t *testing.T, ss *StoreService) {
 // }
 
 // func TestAddStoreGetStore(t *testing.T) {
-// 	logger := zaptest.NewLogger(t)
-// 	appLogger := logging.NewAppLogger(logger, nil)
+//  appLogger := logging.NewTestAppLogger(TEST_DIR)
 // 	css := NewStoreService(appLogger)
 
 // 	storeId, name, org, city := "1", "Plaza Hollywood", "starbucks", "Hong Kong"

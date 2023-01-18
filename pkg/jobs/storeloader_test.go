@@ -7,9 +7,10 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/comfforts/cloudstorage"
+	"github.com/comfforts/logger"
+
 	"github.com/comfforts/comff-stores/pkg/config"
-	"github.com/comfforts/comff-stores/pkg/logging"
-	"github.com/comfforts/comff-stores/pkg/services/filestorage"
 	"github.com/comfforts/comff-stores/pkg/services/store"
 	fileUtils "github.com/comfforts/comff-stores/pkg/utils/file"
 	testUtils "github.com/comfforts/comff-stores/pkg/utils/test"
@@ -49,19 +50,21 @@ func setupStoreLoader(t *testing.T, testDir string) (
 	err := fileUtils.CreateDirectory(fmt.Sprintf("%s/", testDir))
 	require.NoError(t, err)
 
-	appLogger := logging.NewTestAppLogger(TEST_DIR)
+	appLogger := logger.NewTestAppLogger(TEST_DIR)
 	ss := store.NewStoreService(appLogger)
 
 	t.Logf(" setupStoreLoader: getting app-config/loader-config %s", "test-config.json")
 	appCfg, err := config.GetAppConfig("test-config.json", appLogger)
 	require.NoError(t, err)
 
-	cscCfg := appCfg.Services.CloudStorageClientCfg
-	csc, err := filestorage.NewCloudStorageClient(cscCfg, appLogger)
+	cscCfg := cloudstorage.CloudStorageClientConfig{
+		CredsPath: appCfg.Services.CloudStorageClientCfg.CredsPath,
+	}
+	csc, err := cloudstorage.NewCloudStorageClient(cscCfg, appLogger)
 	require.NoError(t, err)
 
 	slCfg := appCfg.Jobs.StoreLoaderConfig
-
+	slCfg.DataDir = TEST_DIR
 	sl, err = NewStoreLoader(slCfg, ss, csc, appLogger)
 	require.NoError(t, err)
 
@@ -98,13 +101,15 @@ func testSaveDataFile(t *testing.T, loader *StoreLoader, testDir string) {
 	fPath, err := testUtils.CreateJSONFile(testDir, name)
 	require.NoError(t, err)
 
+	fileName := filepath.Base(fPath)
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	err = loader.ProcessFile(ctx, fPath)
+	err = loader.ProcessFile(ctx, fileName)
 	require.NoError(t, err)
 
-	err = loader.StoreDataFile(ctx, fPath)
+	err = loader.StoreDataFile(ctx, fileName)
 	require.NoError(t, err)
 }
 
@@ -113,13 +118,15 @@ func testUploadDataFile(t *testing.T, loader *StoreLoader, testDir string) {
 	fPath, err := testUtils.CreateJSONFile(testDir, name)
 	require.NoError(t, err)
 
+	fileName := filepath.Base(fPath)
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	err = loader.StoreDataFile(ctx, fPath)
+	err = loader.StoreDataFile(ctx, fileName)
 	require.NoError(t, err)
 
-	err = loader.UploadDataFile(ctx, fPath)
+	err = loader.UploadDataFile(ctx, fileName)
 	require.NoError(t, err)
 }
 
@@ -128,10 +135,12 @@ func testProcessingLocalFile(t *testing.T, loader *StoreLoader, testDir string) 
 	fPath, err := testUtils.CreateJSONFile(testDir, name)
 	require.NoError(t, err)
 
+	fileName := filepath.Base(fPath)
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	err = loader.ProcessFile(ctx, fPath)
+	err = loader.ProcessFile(ctx, fileName)
 	require.NoError(t, err)
 }
 
@@ -140,6 +149,9 @@ func testProcessingCloudFile(t *testing.T, loader *StoreLoader, testDir string) 
 	defer cancel()
 
 	fPath := filepath.Join(testDir, "test.json")
-	err := loader.ProcessFile(ctx, fPath)
+
+	fileName := filepath.Base(fPath)
+
+	err := loader.ProcessFile(ctx, fileName)
 	require.NoError(t, err)
 }

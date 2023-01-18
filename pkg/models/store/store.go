@@ -6,9 +6,11 @@ import (
 	"os"
 	"time"
 
-	api "github.com/comfforts/comff-stores/api/v1"
-	"github.com/comfforts/comff-stores/pkg/errors"
+	"github.com/comfforts/errors"
 
+	api "github.com/comfforts/comff-stores/api/v1"
+
+	"github.com/comfforts/comff-stores/pkg/constants"
 	fileModels "github.com/comfforts/comff-stores/pkg/models/file"
 )
 
@@ -48,15 +50,28 @@ type StoreStats struct {
 func MapResultToStore(r fileModels.JSONMapper) (*Store, error) {
 	storeJson, err := json.Marshal(r)
 	if err != nil {
-		return nil, errors.WrapError(err, errors.ERROR_MARSHALLING_RESULT)
+		return nil, errors.WrapError(err, constants.ERROR_MARSHALLING_RESULT)
 	}
 
 	var s Store
 	err = json.Unmarshal(storeJson, &s)
 	if err != nil {
-		return nil, errors.WrapError(err, errors.ERROR_UNMARSHALLING_STORE_JSON)
+		return nil, errors.WrapError(err, constants.ERROR_UNMARSHALLING_STORE_JSON)
 	}
 	return &s, nil
+}
+
+func MapStoreToJSON(s *Store) fileModels.JSONMapper {
+	return fileModels.JSONMapper{
+		"id":        s.ID,
+		"name":      s.Name,
+		"org":       s.Org,
+		"city":      s.City,
+		"country":   s.Country,
+		"longitude": s.Longitude,
+		"latitude":  s.Latitude,
+		"store_id":  s.StoreId,
+	}
 }
 
 func MapProtoToStore(s *api.Store) *Store {

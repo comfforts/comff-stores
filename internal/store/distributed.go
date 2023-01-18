@@ -13,12 +13,13 @@ import (
 
 	"github.com/hashicorp/raft"
 
+	"github.com/comfforts/errors"
+	"github.com/comfforts/logger"
+	"github.com/comfforts/recorder"
+
 	api "github.com/comfforts/comff-stores/api/v1"
 
-	"github.com/comfforts/comff-stores/pkg/errors"
-	"github.com/comfforts/comff-stores/pkg/logging"
 	storeModels "github.com/comfforts/comff-stores/pkg/models/store"
-	"github.com/comfforts/comff-stores/pkg/services/log"
 	"github.com/comfforts/comff-stores/pkg/services/store"
 )
 
@@ -50,8 +51,8 @@ type Config struct {
 		StreamLayer *StreamLayer
 		Bootstrap   bool
 	}
-	log.Config
-	Logger *logging.AppLogger
+	recorder.Config
+	Logger logger.AppLogger
 }
 
 type DistributedStores struct {

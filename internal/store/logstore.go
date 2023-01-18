@@ -1,10 +1,11 @@
 package store
 
 import (
-	api "github.com/comfforts/comff-stores/api/v1"
-	"github.com/comfforts/comff-stores/pkg/errors"
-	"github.com/comfforts/comff-stores/pkg/logging"
-	"github.com/comfforts/comff-stores/pkg/services/log"
+	"github.com/comfforts/errors"
+	"github.com/comfforts/logger"
+	"github.com/comfforts/recorder"
+
+	api "github.com/comfforts/recorder/api/v1"
 	"github.com/hashicorp/raft"
 	"go.uber.org/zap"
 )
@@ -18,12 +19,12 @@ const (
 )
 
 type logStore struct {
-	*log.Recorder
-	logger *logging.AppLogger
+	recorder.Recorder
+	logger logger.AppLogger
 }
 
 func newLogStore(dir string, c Config) (*logStore, error) {
-	log, err := log.NewRecorder(dir, c.Config)
+	log, err := recorder.NewRecorder(dir, c.Config)
 	if err != nil {
 		c.Logger.Error(ERROR_CREATING_LOGSTORE, zap.Error(err))
 		return nil, errors.WrapError(err, ERROR_CREATING_LOGSTORE)

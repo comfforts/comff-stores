@@ -9,25 +9,27 @@ import (
 	"sync"
 	"time"
 
+	"github.com/comfforts/cloudstorage"
+	"github.com/comfforts/errors"
+	"github.com/comfforts/localstorage"
+	"github.com/comfforts/logger"
+
 	"github.com/comfforts/comff-stores/pkg/config"
 	"github.com/comfforts/comff-stores/pkg/constants"
-	"github.com/comfforts/comff-stores/pkg/errors"
-	"github.com/comfforts/comff-stores/pkg/logging"
 	storeModels "github.com/comfforts/comff-stores/pkg/models/store"
-	"github.com/comfforts/comff-stores/pkg/services/filestorage"
 	fileUtils "github.com/comfforts/comff-stores/pkg/utils/file"
 	"go.uber.org/zap"
 )
 
 type StoreLoader struct {
-	logger       *logging.AppLogger
+	logger       logger.AppLogger
 	stores       storeModels.Stores
 	config       config.StoreLoaderConfig
-	localStorage *filestorage.LocalStorageClient
-	cloudStorage *filestorage.CloudStorageClient
+	localStorage localstorage.LocalStorage
+	cloudStorage cloudstorage.CloudStorage
 }
 
-func NewStoreLoader(cfg config.StoreLoaderConfig, ss storeModels.Stores, csc *filestorage.CloudStorageClient, l *logging.AppLogger) (*StoreLoader, error) {
+func NewStoreLoader(cfg config.StoreLoaderConfig, ss storeModels.Stores, csc cloudstorage.CloudStorage, l logger.AppLogger) (*StoreLoader, error) {
 	if ss == nil || l == nil || cfg.BucketName == "" {
 		return nil, errors.NewAppError(errors.ERROR_MISSING_REQUIRED)
 	}
@@ -39,7 +41,7 @@ func NewStoreLoader(cfg config.StoreLoaderConfig, ss storeModels.Stores, csc *fi
 		cloudStorage: csc,
 	}
 
-	ll, err := filestorage.NewLocalStorageClient(l)
+	ll, err := localstorage.NewLocalStorageClient(l)
 	if err != nil {
 		return nil, err
 	}
@@ -254,7 +256,7 @@ func (jd *StoreLoader) getFromStorage(ctx context.Context, filePath string) erro
 		}()
 	}
 
-	cfr, err := filestorage.NewCloudFileRequest(jd.config.BucketName, filepath.Base(filePath), filepath.Dir(filePath), fmod)
+	cfr, err := cloudstorage.NewCloudFileRequest(jd.config.BucketName, filepath.Base(filePath), filepath.Dir(filePath), fmod)
 	if err != nil {
 		jd.logger.Error("error creating request", zap.Error(err), zap.String("filepath", filePath))
 		return err
@@ -270,8 +272,8 @@ func (jd *StoreLoader) getFromStorage(ctx context.Context, filePath string) erro
 }
 
 func (jd *StoreLoader) StoreDataFile(ctx context.Context, filePath string) error {
-	dataPath := filepath.Join(jd.config.DataDir, filePath)
-	file, err := jd.stores.Reader(ctx, dataPath)
+	// dataPath := filepath.Join(jd.config.DataDir, filePath)
+	file, err := jd.stores.Reader(ctx, jd.config.DataDir)
 	if err != nil {
 		jd.logger.Error("error saving data file", zap.Error(err), zap.String("filepath", filePath))
 		return err
@@ -306,7 +308,7 @@ func (jd *StoreLoader) UploadDataFile(ctx context.Context, filePath string) erro
 		}
 	}()
 
-	cfr, err := filestorage.NewCloudFileRequest(jd.config.BucketName, filepath.Base(dataPath), filepath.Dir(dataPath), fmod)
+	cfr, err := cloudstorage.NewCloudFileRequest(jd.config.BucketName, filepath.Base(dataPath), filepath.Dir(dataPath), fmod)
 	if err != nil {
 		jd.logger.Error("error creating request", zap.Error(err), zap.String("filepath", filePath))
 		return err

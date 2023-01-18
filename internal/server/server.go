@@ -17,6 +17,9 @@ import (
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/status"
 
+	"github.com/comfforts/geocode"
+	"github.com/comfforts/logger"
+
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_auth "github.com/grpc-ecosystem/go-grpc-middleware/auth"
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
@@ -27,9 +30,7 @@ import (
 
 	api "github.com/comfforts/comff-stores/api/v1"
 
-	"github.com/comfforts/comff-stores/pkg/logging"
 	fileModels "github.com/comfforts/comff-stores/pkg/models/file"
-	geoModels "github.com/comfforts/comff-stores/pkg/models/geo"
 	storeModels "github.com/comfforts/comff-stores/pkg/models/store"
 )
 
@@ -62,11 +63,11 @@ type Servicer interface {
 
 type Config struct {
 	StoreService storeModels.Stores
-	GeoService   geoModels.GeoCoder
+	GeoService   geocode.GeoCoder
 	StoreLoader  fileModels.Loader
 	Authorizer   Authorizer
 	Servicer     Servicer
-	Logger       *logging.AppLogger
+	Logger       logger.AppLogger
 }
 
 type grpcServer struct {

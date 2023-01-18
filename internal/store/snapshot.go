@@ -3,7 +3,8 @@ package store
 import (
 	"io"
 
-	"github.com/comfforts/comff-stores/pkg/logging"
+	"github.com/comfforts/logger"
+
 	"github.com/hashicorp/raft"
 	"go.uber.org/zap"
 )
@@ -12,7 +13,7 @@ var _ raft.FSMSnapshot = (*snapshot)(nil)
 
 type snapshot struct {
 	reader io.Reader
-	logger *logging.AppLogger
+	logger logger.AppLogger
 }
 
 func (s *snapshot) Persist(sink raft.SnapshotSink) error {

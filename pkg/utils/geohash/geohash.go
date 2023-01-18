@@ -3,8 +3,9 @@ package geohash
 import (
 	"fmt"
 
-	"github.com/comfforts/comff-stores/pkg/errors"
-	geoModels "github.com/comfforts/comff-stores/pkg/models/geo"
+	"github.com/comfforts/comff-stores/pkg/constants"
+	"github.com/comfforts/errors"
+	"github.com/comfforts/geocode"
 )
 
 var CharMap = map[string]uint{
@@ -56,15 +57,15 @@ func Encode(lat float64, lon float64, percision int) (string, error) {
 	return hash, nil
 }
 
-func Decode(hash string) (*geoModels.RangeBounds, error) {
+func Decode(hash string) (*geocode.RangeBounds, error) {
 	boundaries, err := bounds(hash)
 	if err != nil {
-		return nil, errors.NewAppError(errors.ERROR_DECODING_BOUNDS)
+		return nil, errors.NewAppError(constants.ERROR_DECODING_BOUNDS)
 	}
 	return boundaries, nil
 }
 
-func bounds(hash string) (*geoModels.RangeBounds, error) {
+func bounds(hash string) (*geocode.RangeBounds, error) {
 	var latMin float64 = -90
 	var latMax float64 = 90
 	var lonMin float64 = -180
@@ -97,13 +98,13 @@ func bounds(hash string) (*geoModels.RangeBounds, error) {
 		}
 	}
 
-	var latRange, lonRange geoModels.Range
+	var latRange, lonRange geocode.Range
 	latRange.Min = latMin
 	latRange.Max = latMax
 	lonRange.Min = lonMin
 	lonRange.Max = lonMax
 
-	var bounds geoModels.RangeBounds
+	var bounds geocode.RangeBounds
 	bounds.Latitude = latRange
 	bounds.Longitude = lonRange
 

@@ -9,8 +9,9 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/comfforts/comff-stores/pkg/errors"
-	"github.com/comfforts/comff-stores/pkg/logging"
+	"github.com/comfforts/errors"
+	"github.com/comfforts/logger"
+
 	fileUtils "github.com/comfforts/comff-stores/pkg/utils/file"
 )
 
@@ -38,7 +39,7 @@ type GeoCodeServiceConfig struct {
 	Host        string `json:"host"`
 	Path        string `json:"path"`
 	Cached      bool   `json:"cached"`
-	DataDir     string `json:"data-dir"`
+	DataDir     string `json:"data_dir"`
 	BucketName  string `json:"bucket_name"`
 }
 
@@ -56,7 +57,7 @@ type JobsConfig struct {
 	StoreLoaderConfig StoreLoaderConfig `json:"store_loader"`
 }
 
-func GetAppConfig(filePath string, logger *logging.AppLogger) (*Configuration, error) {
+func GetAppConfig(filePath string, logger logger.AppLogger) (*Configuration, error) {
 	if filePath == "" {
 		filePath = CONFIG_FILE_NAME
 	}
@@ -74,7 +75,7 @@ func GetAppConfig(filePath string, logger *logging.AppLogger) (*Configuration, e
 	return getFromConfigJson(logger, filePath)
 }
 
-func getFromConfigJson(logger *logging.AppLogger, filePath string) (*Configuration, error) {
+func getFromConfigJson(logger logger.AppLogger, filePath string) (*Configuration, error) {
 	f, err := os.Open(filePath)
 	if err != nil {
 		logger.Error("error opening file", zap.Error(err), zap.String("filePath", filePath))

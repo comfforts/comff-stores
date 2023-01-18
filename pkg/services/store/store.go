@@ -9,8 +9,10 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/comfforts/comff-stores/pkg/errors"
-	"github.com/comfforts/comff-stores/pkg/logging"
+	"github.com/comfforts/errors"
+	"github.com/comfforts/logger"
+
+	"github.com/comfforts/comff-stores/pkg/constants"
 	fileModels "github.com/comfforts/comff-stores/pkg/models/file"
 	storeModels "github.com/comfforts/comff-stores/pkg/models/store"
 	"github.com/comfforts/comff-stores/pkg/utils/geohash"
@@ -23,14 +25,14 @@ import (
 
 type StoreService struct {
 	mu      sync.RWMutex
-	logger  *logging.AppLogger
+	logger  logger.AppLogger
 	stores  map[string]*storeModels.Store
 	hashMap map[string][]string
 	count   int
 	ready   bool
 }
 
-func NewStoreService(logger *logging.AppLogger) *StoreService {
+func NewStoreService(logger logger.AppLogger) *StoreService {
 	ss := &StoreService{
 		logger:  logger,
 		stores:  map[string]*storeModels.Store{},
@@ -48,16 +50,16 @@ func (ss *StoreService) AddStore(ctx context.Context, s *storeModels.Store) (*st
 
 	hashKey, err := geohash.Encode(s.Latitude, s.Longitude, 8)
 	if err != nil {
-		ss.logger.Error(errors.ERROR_ENCODING_LAT_LONG, zap.Float64("latitude", s.Latitude), zap.Float64("longitude", s.Longitude))
-		return nil, errors.WrapError(err, errors.ERROR_ENCODING_LAT_LONG)
+		ss.logger.Error(constants.ERROR_ENCODING_LAT_LONG, zap.Float64("latitude", s.Latitude), zap.Float64("longitude", s.Longitude))
+		return nil, errors.WrapError(err, constants.ERROR_ENCODING_LAT_LONG)
 	}
 
 	id := s.ID
 	if id == "" {
 		id, err := BuildId(s.Latitude, s.Longitude, s.Org)
 		if err != nil {
-			ss.logger.Error(errors.ERROR_ENCODING_ID, zap.String("org", s.Org), zap.Float64("latitude", s.Latitude), zap.Float64("longitude", s.Longitude))
-			return nil, errors.WrapError(err, errors.ERROR_ENCODING_LAT_LONG)
+			ss.logger.Error(constants.ERROR_ENCODING_ID, zap.String("org", s.Org), zap.Float64("latitude", s.Latitude), zap.Float64("longitude", s.Longitude))
+			return nil, errors.WrapError(err, constants.ERROR_ENCODING_LAT_LONG)
 		}
 
 		ssLookup := ss.lookup(id)
@@ -65,18 +67,18 @@ func (ss *StoreService) AddStore(ctx context.Context, s *storeModels.Store) (*st
 			if s.StoreId != ssLookup.StoreId {
 				id, err = BuildIdC(id, fmt.Sprintf("%d", s.StoreId), "")
 				if err != nil {
-					ss.logger.Error(errors.ERROR_ENCODING_ID, zap.Error(err), zap.Uint64("storeId", s.StoreId))
-					return nil, errors.WrapError(err, errors.ERROR_ENCODING_ID)
+					ss.logger.Error(constants.ERROR_ENCODING_ID, zap.Error(err), zap.Uint64("storeId", s.StoreId))
+					return nil, errors.WrapError(err, constants.ERROR_ENCODING_ID)
 				}
 			} else if s.Name != ssLookup.Name {
 				id, err = BuildIdC(id, "", s.Name)
 				if err != nil {
-					ss.logger.Error(errors.ERROR_ENCODING_ID, zap.Error(err), zap.String("name", s.Name))
-					return nil, errors.WrapError(err, errors.ERROR_ENCODING_ID)
+					ss.logger.Error(constants.ERROR_ENCODING_ID, zap.Error(err), zap.String("name", s.Name))
+					return nil, errors.WrapError(err, constants.ERROR_ENCODING_ID)
 				}
 			} else {
-				ss.logger.Error(errors.ERROR_STORE_ID_ALREADY_EXISTS, zap.String("id", id))
-				return nil, errors.NewAppError(errors.ERROR_STORE_ID_ALREADY_EXISTS)
+				ss.logger.Error(constants.ERROR_STORE_ID_ALREADY_EXISTS, zap.String("id", id))
+				return nil, errors.NewAppError(constants.ERROR_STORE_ID_ALREADY_EXISTS)
 			}
 		}
 		s.ID = id
@@ -98,8 +100,8 @@ func (ss *StoreService) AddStore(ctx context.Context, s *storeModels.Store) (*st
 func (ss *StoreService) GetStore(ctx context.Context, id string) (*storeModels.Store, error) {
 	s := ss.lookup(id)
 	if s == nil {
-		ss.logger.Error(errors.ERROR_NO_STORE_FOUND_FOR_ID, zap.String("id", id))
-		return nil, errors.WrapError(errors.ErrNotFound, errors.ERROR_NO_STORE_FOUND_FOR_ID)
+		ss.logger.Error(constants.ERROR_NO_STORE_FOUND_FOR_ID, zap.String("id", id))
+		return nil, errors.WrapError(constants.ErrNotFound, constants.ERROR_NO_STORE_FOUND_FOR_ID)
 	}
 	return s, nil
 }
@@ -118,7 +120,7 @@ func (ss *StoreService) GetStoresForGeoPoint(ctx context.Context, lat, long floa
 	for _, v := range ids {
 		store, err := ss.GetStore(ctx, v)
 		if err != nil {
-			ss.logger.Error(errors.ERROR_NO_STORE_FOUND_FOR_ID, zap.String("id", v))
+			ss.logger.Error(constants.ERROR_NO_STORE_FOUND_FOR_ID, zap.String("id", v))
 		}
 		// pos := haversine.Point{Lat: store.Latitude, Lon: store.Longitude}
 		pos := vincenty.LatLng{Latitude: store.Latitude, Longitude: store.Longitude}
@@ -209,14 +211,14 @@ func (ss *StoreService) Reader(ctx context.Context, dataDir string) (*os.File, e
 func (ss *StoreService) getStoreIdsForLatLong(lat, long float64) ([]string, error) {
 	hashKey, err := geohash.Encode(lat, long, 8)
 	if err != nil {
-		ss.logger.Error(errors.ERROR_ENCODING_LAT_LONG, zap.Float64("latitude", lat), zap.Float64("longitude", long))
-		return nil, errors.WrapError(err, errors.ERROR_ENCODING_LAT_LONG)
+		ss.logger.Error(constants.ERROR_ENCODING_LAT_LONG, zap.Float64("latitude", lat), zap.Float64("longitude", long))
+		return nil, errors.WrapError(err, constants.ERROR_ENCODING_LAT_LONG)
 	}
 	ss.logger.Debug("created hash key", zap.String("hashKey", hashKey), zap.Float64("latitude", lat), zap.Float64("longitude", long))
 	ids, ok := ss.hashMap[hashKey]
 	if !ok || len(ids) < 1 {
-		ss.logger.Error(errors.ERROR_NO_STORE_FOUND, zap.Float64("latitude", lat), zap.Float64("longitude", long))
-		return nil, errors.NewAppError(errors.ERROR_NO_STORE_FOUND)
+		ss.logger.Error(constants.ERROR_NO_STORE_FOUND, zap.Float64("latitude", lat), zap.Float64("longitude", long))
+		return nil, errors.NewAppError(constants.ERROR_NO_STORE_FOUND)
 	}
 	return ids, nil
 }
@@ -232,7 +234,7 @@ func (ss *StoreService) lookup(k string) *storeModels.Store {
 func BuildId(lat, long float64, org string) (string, error) {
 	hPart, err := geohash.Encode(lat, long, 12)
 	if err != nil {
-		return "", errors.WrapError(err, errors.ERROR_ENCODING_LAT_LONG)
+		return "", errors.WrapError(err, constants.ERROR_ENCODING_LAT_LONG)
 	}
 	oPart := org
 	if len(org) > 6 {

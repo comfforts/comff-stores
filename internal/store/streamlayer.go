@@ -7,7 +7,8 @@ import (
 	"net"
 	"time"
 
-	"github.com/comfforts/comff-stores/pkg/logging"
+	"github.com/comfforts/logger"
+
 	"github.com/hashicorp/raft"
 	"go.uber.org/zap"
 )
@@ -20,14 +21,14 @@ type StreamLayer struct {
 	ln              net.Listener
 	serverTLSConfig *tls.Config
 	peerTLSConfig   *tls.Config
-	logger          *logging.AppLogger
+	logger          logger.AppLogger
 }
 
 func NewStreamLayer(
 	ln net.Listener,
 	serverTLSConfig,
 	peerTLSConfig *tls.Config,
-	logger *logging.AppLogger,
+	logger logger.AppLogger,
 ) *StreamLayer {
 	return &StreamLayer{
 		ln:              ln,

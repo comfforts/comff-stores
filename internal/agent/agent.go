@@ -22,16 +22,17 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
+	"github.com/comfforts/cloudstorage"
+	appErrors "github.com/comfforts/errors"
+	"github.com/comfforts/geocode"
+	"github.com/comfforts/logger"
+
 	"github.com/comfforts/comff-stores/internal/auth"
 	"github.com/comfforts/comff-stores/internal/discovery"
 	"github.com/comfforts/comff-stores/internal/server"
 	"github.com/comfforts/comff-stores/internal/store"
 	appConfig "github.com/comfforts/comff-stores/pkg/config"
-	appErrors "github.com/comfforts/comff-stores/pkg/errors"
 	"github.com/comfforts/comff-stores/pkg/jobs"
-	"github.com/comfforts/comff-stores/pkg/logging"
-	"github.com/comfforts/comff-stores/pkg/services/filestorage"
-	"github.com/comfforts/comff-stores/pkg/services/geocode"
 	fileUtils "github.com/comfforts/comff-stores/pkg/utils/file"
 )
 
@@ -85,7 +86,7 @@ type Config struct {
 
 type Agent struct {
 	Config
-	logger  *logging.AppLogger
+	logger  logger.AppLogger
 	DataDir string
 
 	mux    cmux.CMux
@@ -137,13 +138,13 @@ func NewAgent(config Config) (*Agent, error) {
 func (a *Agent) setupLogger() error {
 	filePath := filepath.Join(a.Config.DataDir, "logs", "agent.log")
 
-	logCfg := &logging.AppLoggerConfig{
+	logCfg := &logger.AppLoggerConfig{
 		Level:    zapcore.DebugLevel,
 		FilePath: filePath,
+		Name:     "comff-stores-agent",
 	}
 
-	appLogger := logging.NewAppLogger(nil, logCfg)
-	appLogger.Named("comff-stores-agent")
+	appLogger := logger.NewAppLogger(logCfg)
 
 	a.logger = appLogger
 	return nil
@@ -297,14 +298,21 @@ func (a *Agent) setupServer() error {
 	}
 
 	a.logger.Info("creating cloud storage client")
-	csc, err := filestorage.NewCloudStorageClient(appCfg.Services.CloudStorageClientCfg, a.logger)
+	cscCfg := cloudstorage.CloudStorageClientConfig{
+		CredsPath: appCfg.Services.CloudStorageClientCfg.CredsPath,
+	}
+	csc, err := cloudstorage.NewCloudStorageClient(cscCfg, a.logger)
 	if err != nil {
 		a.logger.Error("error creating cloud storage client", zap.Error(err))
 	}
 
 	a.logger.Info("creating geo coding service instance")
-	appCfg.Services.GeoCodeCfg.DataDir = a.Config.DataDir
-	geoServ, err := geocode.NewGeoCodeService(appCfg.Services.GeoCodeCfg, csc, a.logger)
+	gscCfg := geocode.GeoCodeServiceConfig{
+		DataDir:     a.Config.DataDir,
+		BucketName:  appCfg.Services.GeoCodeCfg.BucketName,
+		GeocoderKey: appCfg.Services.GeoCodeCfg.GeocoderKey,
+	}
+	geoServ, err := geocode.NewGeoCodeService(gscCfg, csc, a.logger)
 	if err != nil {
 		a.logger.Error("error initializing maps client", zap.Error(err))
 		return err

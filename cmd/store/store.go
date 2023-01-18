@@ -12,14 +12,15 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/comfforts/cloudstorage"
+	"github.com/comfforts/geocode"
+	"github.com/comfforts/logger"
+
 	"github.com/comfforts/comff-stores/internal/auth"
 	"github.com/comfforts/comff-stores/internal/config"
 	"github.com/comfforts/comff-stores/internal/server"
 	appConfig "github.com/comfforts/comff-stores/pkg/config"
 	"github.com/comfforts/comff-stores/pkg/jobs"
-	"github.com/comfforts/comff-stores/pkg/logging"
-	"github.com/comfforts/comff-stores/pkg/services/filestorage"
-	"github.com/comfforts/comff-stores/pkg/services/geocode"
 	"github.com/comfforts/comff-stores/pkg/services/store"
 	"go.opencensus.io/examples/exporter"
 	"go.uber.org/zap"
@@ -34,10 +35,11 @@ func main() {
 	ctx := context.Background()
 
 	fmt.Println("  initializing app logger instance")
-	logCfg := &logging.AppLoggerConfig{
+	logCfg := &logger.AppLoggerConfig{
 		Level: zapcore.DebugLevel,
+		Name:  "comff-stores",
 	}
-	logger := logging.NewAppLogger(nil, logCfg)
+	logger := logger.NewAppLogger(logCfg)
 
 	logger.Info("creating app configuration")
 	appCfg, err := appConfig.GetAppConfig("", logger)
@@ -97,15 +99,25 @@ func main() {
 }
 
 // sets up server and returns server cleanup callback
-func setupServer(appCfg *appConfig.Configuration, addr string, logger *logging.AppLogger) (*grpc.Server, func(), error) {
+func setupServer(appCfg *appConfig.Configuration, addr string, logger logger.AppLogger) (*grpc.Server, func(), error) {
 	logger.Info("creating cloud storage client")
-	csc, err := filestorage.NewCloudStorageClient(appCfg.Services.CloudStorageClientCfg, logger)
+
+	cscCfg := cloudstorage.CloudStorageClientConfig{
+		CredsPath: appCfg.Services.CloudStorageClientCfg.CredsPath,
+	}
+
+	csc, err := cloudstorage.NewCloudStorageClient(cscCfg, logger)
 	if err != nil {
 		logger.Error("error creating cloud storage client", zap.Error(err))
 	}
 
 	logger.Info("creating geo coding service instance")
-	geoServ, err := geocode.NewGeoCodeService(appCfg.Services.GeoCodeCfg, csc, logger)
+	gscCfg := geocode.GeoCodeServiceConfig{
+		DataDir:     appCfg.Services.GeoCodeCfg.DataDir,
+		BucketName:  appCfg.Services.GeoCodeCfg.BucketName,
+		GeocoderKey: appCfg.Services.GeoCodeCfg.GeocoderKey,
+	}
+	geoServ, err := geocode.NewGeoCodeService(gscCfg, csc, logger)
 	if err != nil {
 		logger.Fatal("error initializing maps client", zap.Error(err))
 		return nil, nil, err
@@ -169,7 +181,7 @@ func setupServer(appCfg *appConfig.Configuration, addr string, logger *logging.A
 }
 
 // sets up telemetry and returns telemetery cleanup callback
-func setupTelemetry(logger *logging.AppLogger) (func(), error) {
+func setupTelemetry(logger logger.AppLogger) (func(), error) {
 	mfPath := filepath.Join("logs", "metrics.log")
 
 	if err := fileUtils.CreateDirectory(mfPath); err != nil {
