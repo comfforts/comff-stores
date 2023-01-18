@@ -30,7 +30,7 @@ start-server:
 build-exec:
 	@echo "building latest executables for ${HEAD}"
 	scripts/build-exec.sh
-	scripts/build-exec.sh darwin amd64
+	scripts/build-exec.sh darwin arm64
 	scripts/build-exec.sh linux arm64
 	scripts/build-exec.sh linux amd64
 
@@ -58,13 +58,13 @@ run-docker-test:
 start-agent:
 	@echo "starting agent with latest ${HEAD}"
 	rm -rf cmd/cli/data/raft
-	cd cmd/cli && go run comffstore.go --data-dir ./data --bootstrap true
+	cd cmd/cli && go run comffstore.go --data-dir data --bootstrap true
 
 .PHONY: build-agent-exec
 build-agent-exec:
 	@echo "building latest executables for ${HEAD}"
 	scripts/build-agent-exec.sh
-	scripts/build-agent-exec.sh darwin amd64
+	scripts/build-agent-exec.sh darwin arm64
 	scripts/build-agent-exec.sh linux arm64
 	scripts/build-agent-exec.sh linux amd64
 

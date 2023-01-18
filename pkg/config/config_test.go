@@ -5,10 +5,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/comfforts/logger"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap/zaptest"
-
-	"github.com/comfforts/comff-stores/pkg/logging"
 )
 
 func TestGetConfig(t *testing.T) {
@@ -16,9 +14,7 @@ func TestGetConfig(t *testing.T) {
 	err := createConfigFile(ors)
 	require.NoError(t, err)
 
-	logger := zaptest.NewLogger(t)
-	appLogger := logging.NewAppLogger(logger, nil)
-
+	appLogger := logger.NewTestAppLogger("")
 	config, err := GetAppConfig("", appLogger)
 	require.NoError(t, err)
 	require.Equal(t, 50051, config.ServicePort)
@@ -29,7 +25,7 @@ func TestGetConfig(t *testing.T) {
 	require.Equal(t, "mustum-geo", config.Services.GeoCodeCfg.BucketName)
 	require.Equal(t, false, config.Services.GeoCodeCfg.Cached)
 
-	require.Equal(t, "data", config.Jobs.StoreLoaderConfig.DataPath)
+	require.Equal(t, "data", config.Jobs.StoreLoaderConfig.DataDir)
 	require.Equal(t, "mustum-store", config.Jobs.StoreLoaderConfig.BucketName)
 
 	err = removeConfigFile()
@@ -57,13 +53,13 @@ func createConfigFile(ors Overrides) error {
 			"geo_code": map[string]interface{}{
 				"geocoder_key": "APIKEY34df56APIKEY",
 				"bucket_name":  "mustum-geo",
-				"data_path":    "geocode",
+				"data_dir":     "geocode",
 			},
 		},
 		"jobs": map[string]interface{}{
 			"store_loader": map[string]interface{}{
 				"bucket_name": "mustum-store",
-				"data_path":   "data",
+				"data_dir":    "data",
 			},
 		},
 	}

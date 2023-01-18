@@ -8,10 +8,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/comfforts/logger"
+
 	api "github.com/comfforts/comff-stores/api/v1"
 	"github.com/comfforts/comff-stores/internal/auth"
 	"github.com/comfforts/comff-stores/internal/config"
-	"github.com/comfforts/comff-stores/pkg/logging"
 	"github.com/comfforts/comff-stores/pkg/services/store"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -81,7 +82,7 @@ func setupTest(t *testing.T, fn func(*Config)) (
 	cc, client, _ := newClient(config.ClientCertFile, config.ClientKeyFile)
 	nbcc, nbClient, _ := newClient(config.NobodyClientCertFile, config.NobodyClientKeyFile)
 
-	appLogger := logging.NewTestAppLogger(TEST_DIR)
+	appLogger := logger.NewTestAppLogger(TEST_DIR)
 	css := store.NewStoreService(appLogger)
 
 	modelFilePath := filepath.Join("../../cmd/store", config.PolicyFile(config.ACLModelFile))

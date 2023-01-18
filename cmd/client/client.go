@@ -10,10 +10,11 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
+	"github.com/comfforts/logger"
+
 	api "github.com/comfforts/comff-stores/api/v1"
 
 	"github.com/comfforts/comff-stores/internal/config"
-	"github.com/comfforts/comff-stores/pkg/logging"
 )
 
 const SERVICE_PORT = 50051
@@ -21,11 +22,12 @@ const SERVICE_DOMAIN = "127.0.0.1"
 
 func main() {
 	// initialize app logger instance
-	logCfg := &logging.AppLoggerConfig{
+	logCfg := &logger.AppLoggerConfig{
 		FilePath: filepath.Join("logs", "client.log"),
 		Level:    zapcore.DebugLevel,
+		Name:     "comff-stores-client",
 	}
-	logger := logging.NewAppLogger(nil, logCfg)
+	logger := logger.NewAppLogger(logCfg)
 
 	tlsConfig, err := config.SetupTLSConfig(config.TLSConfig{
 		CertFile: config.CertFile(config.ClientCertFile),
@@ -47,17 +49,33 @@ func main() {
 	defer conn.Close()
 
 	client := api.NewStoresClient(conn)
+	testGetServers(client, logger)
 
-	ok := testStoreUpload(client, logger)
-	if ok {
-		testSearchStore(client, logger)
+	// ok := testStoreUpload(client, logger)
+	// if ok {
+	// 	testSearchStore(client, logger)
 
-		id := testAddStore(client, logger)
-		testGetStore(client, logger, id)
+	// 	id := testAddStore(client, logger)
+	// 	testGetStore(client, logger, id)
+	// }
+}
+
+func testGetServers(client api.StoresClient, logger logger.AppLogger) {
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	req := &api.GetServersRequest{}
+	resp, err := client.GetServers(ctx, req)
+	if err != nil {
+		logger.Fatal("error getting servers", zap.Error(err))
+	}
+	for k, v := range resp.Servers {
+		logger.Info("Server response", zap.Any("num", k), zap.Any("server", v))
 	}
 }
 
-func testStoreUpload(client api.StoresClient, logger *logging.AppLogger) bool {
+func testStoreUpload(client api.StoresClient, logger logger.AppLogger) bool {
 	ctx := context.Background()
 
 	req := &api.StoreUploadRequest{
@@ -73,7 +91,7 @@ func testStoreUpload(client api.StoresClient, logger *logging.AppLogger) bool {
 	return resp.Ok
 }
 
-func testAddStore(client api.StoresClient, logger *logging.AppLogger) string {
+func testAddStore(client api.StoresClient, logger logger.AppLogger) string {
 	ctx := context.Background()
 
 	storeId, name, org, city := uint64(1), "Plaza Hollywood", "subway", "Hong Kong"
@@ -96,7 +114,7 @@ func testAddStore(client api.StoresClient, logger *logging.AppLogger) string {
 	return addStoreRes.Store.Id
 }
 
-func testGetStore(client api.StoresClient, logger *logging.AppLogger, id string) {
+func testGetStore(client api.StoresClient, logger logger.AppLogger, id string) {
 	ctx := context.Background()
 
 	getStoreReq := &api.GetStoreRequest{
@@ -110,7 +128,7 @@ func testGetStore(client api.StoresClient, logger *logging.AppLogger, id string)
 	logger.Info("GetStore response from store server", zap.Any("getStoreResp", getStoreRes))
 }
 
-func testSearchStore(client api.StoresClient, logger *logging.AppLogger) {
+func testSearchStore(client api.StoresClient, logger logger.AppLogger) {
 	ctx := context.Background()
 
 	searchStoreReq := &api.SearchStoreRequest{

@@ -8,17 +8,19 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/comfforts/comff-stores/pkg/errors"
-	"github.com/comfforts/comff-stores/pkg/logging"
+	"github.com/comfforts/errors"
+	"github.com/comfforts/logger"
+
+	"github.com/comfforts/comff-stores/pkg/constants"
 	fileUtils "github.com/comfforts/comff-stores/pkg/utils/file"
 )
 
 type Authorizer struct {
 	enforcer *casbin.Enforcer
-	logger   *logging.AppLogger
+	logger   logger.AppLogger
 }
 
-func NewAuthorizer(model, policy string, logger *logging.AppLogger) (*Authorizer, error) {
+func NewAuthorizer(model, policy string, logger logger.AppLogger) (*Authorizer, error) {
 	_, err := fileUtils.FileStats(model)
 	if err != nil {
 		msg := fmt.Sprintf(fileUtils.ERROR_NO_FILE, model)
@@ -43,7 +45,7 @@ func NewAuthorizer(model, policy string, logger *logging.AppLogger) (*Authorizer
 func (a *Authorizer) Authorize(subject, object, action string) error {
 	if !a.enforcer.Enforce(subject, object, action) {
 		msg := fmt.Sprintf("%s not permitted to %s to %s", subject, action, object)
-		a.logger.Error(msg, zap.Error(errors.ErrUserAccessDenied))
+		a.logger.Error(msg, zap.Error(constants.ErrUserAccessDenied))
 		st := status.New(codes.PermissionDenied, msg)
 		return st.Err()
 	}

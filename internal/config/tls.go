@@ -5,7 +5,8 @@ import (
 	"crypto/x509"
 	"io/ioutil"
 
-	"github.com/comfforts/comff-stores/pkg/errors"
+	"github.com/comfforts/errors"
+
 	fileUtils "github.com/comfforts/comff-stores/pkg/utils/file"
 )
 

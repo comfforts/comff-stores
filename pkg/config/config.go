@@ -3,13 +3,15 @@ package config
 import (
 	"bufio"
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 
 	"go.uber.org/zap"
 
-	"github.com/comfforts/comff-stores/pkg/errors"
-	"github.com/comfforts/comff-stores/pkg/logging"
+	"github.com/comfforts/errors"
+	"github.com/comfforts/logger"
+
 	fileUtils "github.com/comfforts/comff-stores/pkg/utils/file"
 )
 
@@ -37,7 +39,7 @@ type GeoCodeServiceConfig struct {
 	Host        string `json:"host"`
 	Path        string `json:"path"`
 	Cached      bool   `json:"cached"`
-	DataDir     string `json:"data-dir"`
+	DataDir     string `json:"data_dir"`
 	BucketName  string `json:"bucket_name"`
 }
 
@@ -47,7 +49,7 @@ type ServicesConfig struct {
 }
 
 type StoreLoaderConfig struct {
-	DataPath   string `json:"data_path"`
+	DataDir    string `json:"data_dir"`
 	BucketName string `json:"bucket_name"`
 }
 
@@ -55,25 +57,25 @@ type JobsConfig struct {
 	StoreLoaderConfig StoreLoaderConfig `json:"store_loader"`
 }
 
-func GetAppConfig(fileName string, logger *logging.AppLogger) (*Configuration, error) {
-	if fileName == "" {
-		fileName = CONFIG_FILE_NAME
+func GetAppConfig(filePath string, logger logger.AppLogger) (*Configuration, error) {
+	if filePath == "" {
+		filePath = CONFIG_FILE_NAME
 	}
 
-	_, err := os.Stat(fileName)
+	_, err := os.Stat(filePath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			logger.Error("file doesn't exist", zap.Error(err), zap.String("filePath", fileName))
-			return nil, errors.WrapError(err, fileUtils.ERROR_NO_FILE, fileName)
+			logger.Error("file doesn't exist", zap.Error(err), zap.String("filePath", filePath))
+			return nil, errors.WrapError(err, fileUtils.ERROR_NO_FILE, filePath)
 		}
-		logger.Error("error accessing file", zap.Error(err), zap.String("filePath", fileName))
-		return nil, errors.WrapError(err, fileUtils.ERROR_FILE_INACCESSIBLE, fileName)
+		logger.Error("error accessing file", zap.Error(err), zap.String("filePath", filePath))
+		return nil, errors.WrapError(err, fileUtils.ERROR_FILE_INACCESSIBLE, filePath)
 	}
 
-	return getFromConfigJson(logger, fileName)
+	return getFromConfigJson(logger, filePath)
 }
 
-func getFromConfigJson(logger *logging.AppLogger, filePath string) (*Configuration, error) {
+func getFromConfigJson(logger logger.AppLogger, filePath string) (*Configuration, error) {
 	f, err := os.Open(filePath)
 	if err != nil {
 		logger.Error("error opening file", zap.Error(err), zap.String("filePath", filePath))
@@ -104,6 +106,8 @@ func getFromConfigJson(logger *logging.AppLogger, filePath string) (*Configurati
 			logger.Error("missing cloud storage client config", zap.String("filePath", filePath))
 			return nil, ErrMissingCloudConfig
 		}
+
+		fmt.Printf("    config: %v\n", config)
 
 		if config.Services.GeoCodeCfg.GeocoderKey == "" {
 			logger.Error("missing geocoder config", zap.String("filePath", filePath))

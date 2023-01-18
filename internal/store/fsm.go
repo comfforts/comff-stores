@@ -6,8 +6,9 @@ import (
 	"encoding/json"
 	"io"
 
+	"github.com/comfforts/logger"
+
 	api "github.com/comfforts/comff-stores/api/v1"
-	"github.com/comfforts/comff-stores/pkg/logging"
 	"github.com/hashicorp/raft"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
@@ -20,8 +21,9 @@ import (
 var _ raft.FSM = (*fsm)(nil)
 
 type fsm struct {
+	DataDir      string
 	StoreService storeModels.Stores
-	logger       *logging.AppLogger
+	logger       logger.AppLogger
 }
 
 type RequestType uint8
@@ -62,7 +64,7 @@ func (fs *fsm) applyAddStore(b []byte) interface{} {
 
 func (fs *fsm) Snapshot() (raft.FSMSnapshot, error) {
 	ctx := context.Background()
-	r, err := fs.StoreService.Reader(ctx, "")
+	r, err := fs.StoreService.Reader(ctx, fs.DataDir)
 	if err != nil {
 		return nil, err
 	}
