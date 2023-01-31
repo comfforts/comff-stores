@@ -85,6 +85,8 @@ func (c *cli) setupConfig(cmd *cobra.Command, args []string) error {
 	c.cfg.Config.PeerNodeAddrs = viper.GetStringSlice("peer-join-addrs")
 	c.cfg.Config.Bootstrap = viper.GetBool("bootstrap")
 
+	c.cfg.Config.MaxIndexSize = 500
+
 	policiesPath := viper.GetString("policies-path")
 	c.cfg.Config.ACLModelFile = path.Join(runDir, policiesPath, config.PolicyFile(config.ACLModelFile))
 	c.cfg.Config.ACLPolicyFile = path.Join(runDir, policiesPath, config.PolicyFile(config.ACLPolicyFile))

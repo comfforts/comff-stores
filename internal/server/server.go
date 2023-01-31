@@ -165,15 +165,7 @@ func (s *grpcServer) AddStore(ctx context.Context, req *api.AddStoreRequest) (*a
 		return nil, err
 	}
 
-	store, err := s.StoreService.AddStore(ctx, &storeModels.Store{
-		Name:      req.Name,
-		Org:       req.Org,
-		Longitude: float64(req.Longitude),
-		Latitude:  float64(req.Latitude),
-		City:      req.City,
-		Country:   req.Country,
-		StoreId:   req.StoreId,
-	})
+	store, err := s.StoreService.AddStore(ctx, storeModels.MapStoreRequestToStore(req))
 	if store == nil || err != nil {
 		s.Logger.Error("store already exists", zap.Error(err))
 		st := status.New(codes.AlreadyExists, "store already exists")
