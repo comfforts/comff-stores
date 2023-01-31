@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/comfforts/cloudstorage"
 	"github.com/comfforts/errors"
@@ -208,7 +207,7 @@ func (jd *StoreLoader) addStore(ctx context.Context, s *storeModels.Store) (*sto
 		fileName := filepath.Base(ctx.Value(constants.FilePathContextKey).(string))
 		s.Org = fileName[0:strings.Index(fileName, ".")]
 	}
-	time.Sleep(50 * time.Millisecond)
+	// time.Sleep(50 * time.Millisecond)
 	return jd.stores.AddStore(ctx, s)
 }
 
