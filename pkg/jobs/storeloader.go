@@ -15,20 +15,20 @@ import (
 
 	"github.com/comfforts/comff-stores/pkg/config"
 	"github.com/comfforts/comff-stores/pkg/constants"
-	storeModels "github.com/comfforts/comff-stores/pkg/models/store"
+	"github.com/comfforts/comff-stores/pkg/models"
 	fileUtils "github.com/comfforts/comff-stores/pkg/utils/file"
 	"go.uber.org/zap"
 )
 
 type StoreLoader struct {
 	logger       logger.AppLogger
-	stores       storeModels.Stores
+	stores       models.Stores
 	config       config.StoreLoaderConfig
 	localStorage localstorage.LocalStorage
 	cloudStorage cloudstorage.CloudStorage
 }
 
-func NewStoreLoader(cfg config.StoreLoaderConfig, ss storeModels.Stores, csc cloudstorage.CloudStorage, l logger.AppLogger) (*StoreLoader, error) {
+func NewStoreLoader(cfg config.StoreLoaderConfig, ss models.Stores, csc cloudstorage.CloudStorage, l logger.AppLogger) (*StoreLoader, error) {
 	if ss == nil || l == nil || cfg.BucketName == "" {
 		return nil, errors.NewAppError(errors.ERROR_MISSING_REQUIRED)
 	}
@@ -66,7 +66,7 @@ func (jd *StoreLoader) ProcessFile(ctx context.Context, filePath string) error {
 		cancel()
 	}()
 
-	storeQueue := make(chan *storeModels.Store)
+	storeQueue := make(chan *models.Store)
 	var fileProcessingWaitGrp sync.WaitGroup
 	var storeUpdateWaitGrp sync.WaitGroup
 
@@ -126,7 +126,7 @@ func (jd *StoreLoader) queueFileStreaming(
 	cancel func(),
 	fileProcessingWaitGrp *sync.WaitGroup,
 	storeUpdateWaitGrp *sync.WaitGroup,
-	storeQueue chan *storeModels.Store,
+	storeQueue chan *models.Store,
 ) {
 	jd.logger.Info("start reading store data file")
 	fp := ctx.Value(constants.FilePathContextKey).(string)
@@ -162,10 +162,10 @@ func (jd *StoreLoader) queueFileStreaming(
 
 func (jd *StoreLoader) queueStoreProcessing(
 	r map[string]interface{},
-	storeQueue chan *storeModels.Store,
+	storeQueue chan *models.Store,
 	cancel func(),
 ) {
-	store, err := storeModels.MapResultToStore(r)
+	store, err := models.MapResultToStore(r)
 	if err != nil {
 		jd.logger.Error("error processing store data", zap.Error(err), zap.Any("storeJson", r))
 	} else {
@@ -178,7 +178,7 @@ func (jd *StoreLoader) queueStoreUpdate(
 	cancel func(),
 	fileProcessingWaitGrp *sync.WaitGroup,
 	storeUpdateWaitGrp *sync.WaitGroup,
-	storeQueue chan *storeModels.Store,
+	storeQueue chan *models.Store,
 ) {
 	jd.logger.Info("start updating store data")
 
@@ -202,7 +202,7 @@ func (jd *StoreLoader) queueStoreUpdate(
 	}
 }
 
-func (jd *StoreLoader) addStore(ctx context.Context, s *storeModels.Store) (*storeModels.Store, error) {
+func (jd *StoreLoader) addStore(ctx context.Context, s *models.Store) (*models.Store, error) {
 	if s.Org == "" {
 		fileName := filepath.Base(ctx.Value(constants.FilePathContextKey).(string))
 		s.Org = fileName[0:strings.Index(fileName, ".")]

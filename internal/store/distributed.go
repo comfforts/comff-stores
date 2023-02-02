@@ -19,7 +19,7 @@ import (
 
 	api "github.com/comfforts/comff-stores/api/v1"
 
-	storeModels "github.com/comfforts/comff-stores/pkg/models/store"
+	"github.com/comfforts/comff-stores/pkg/models"
 	"github.com/comfforts/comff-stores/pkg/services/store"
 )
 
@@ -57,7 +57,7 @@ type Config struct {
 
 type DistributedStores struct {
 	config           Config
-	stores           storeModels.Stores
+	stores           models.Stores
 	raft             *raft.Raft
 	shutdownCallback func() error
 }
@@ -196,7 +196,7 @@ func (ds *DistributedStores) setupRaft(dataDir string) error {
 	return err
 }
 
-func (ds *DistributedStores) AddStore(ctx context.Context, s *storeModels.Store) (*storeModels.Store, error) {
+func (ds *DistributedStores) AddStore(ctx context.Context, s *models.Store) (*models.Store, error) {
 	ds.config.Logger.Debug("distributed store AddStore()", zap.String("node", string(ds.config.Raft.LocalID)))
 	res, err := ds.apply(
 		AddStoreRequestType,
@@ -213,7 +213,7 @@ func (ds *DistributedStores) AddStore(ctx context.Context, s *storeModels.Store)
 	if err != nil {
 		return nil, err
 	}
-	store := storeModels.MapProtoToStore(res.(*api.AddStoreResponse).Store)
+	store := models.MapProtoToStore(res.(*api.AddStoreResponse).Store)
 	return store, nil
 }
 
@@ -252,17 +252,17 @@ func (ds *DistributedStores) apply(reqType RequestType, req proto.Message) (
 	return res, nil
 }
 
-func (ds *DistributedStores) GetStore(ctx context.Context, id string) (*storeModels.Store, error) {
+func (ds *DistributedStores) GetStore(ctx context.Context, id string) (*models.Store, error) {
 	ds.config.Logger.Debug("distributed store GetStore()", zap.String("node", string(ds.config.Raft.LocalID)))
 	return ds.stores.GetStore(ctx, id)
 }
 
-func (ds *DistributedStores) GetStoresForGeoPoint(ctx context.Context, lat, long float64, dist int) ([]*storeModels.StoreGeo, error) {
+func (ds *DistributedStores) GetStoresForGeoPoint(ctx context.Context, lat, long float64, dist int) ([]*models.StoreGeo, error) {
 	ds.config.Logger.Debug("distributed store GetStoresForGeoPoint()", zap.String("node", string(ds.config.Raft.LocalID)))
 	return ds.stores.GetStoresForGeoPoint(ctx, lat, long, dist)
 }
 
-func (ds *DistributedStores) GetStoreStats() storeModels.StoreStats {
+func (ds *DistributedStores) GetStoreStats() models.StoreStats {
 	ds.config.Logger.Debug("distributed store GetStoreStats()", zap.String("node", string(ds.config.Raft.LocalID)))
 	return ds.stores.GetStoreStats()
 }

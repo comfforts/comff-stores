@@ -6,8 +6,7 @@ import (
 	"os"
 
 	api "github.com/comfforts/comff-stores/api/v1"
-	fileModels "github.com/comfforts/comff-stores/pkg/models/file"
-	storeModels "github.com/comfforts/comff-stores/pkg/models/store"
+	"github.com/comfforts/comff-stores/pkg/models"
 )
 
 func CreateJSONFile(dir, name string) (string, error) {
@@ -53,8 +52,8 @@ func CreateSingleJSONFile(dir, name string) (string, error) {
 	return fPath, nil
 }
 
-func CreateStoreJSON(storeId uint64, name, org, city, country string) fileModels.JSONMapper {
-	s := fileModels.JSONMapper{
+func CreateStoreJSON(storeId uint64, name, org, city, country string) models.JSONMapper {
+	s := models.JSONMapper{
 		"name":      name,
 		"org":       org,
 		"city":      city,
@@ -66,8 +65,8 @@ func CreateStoreJSON(storeId uint64, name, org, city, country string) fileModels
 	return s
 }
 
-func CreateStoreJSONList() []fileModels.JSONMapper {
-	items := []fileModels.JSONMapper{
+func CreateStoreJSONList() []models.JSONMapper {
+	items := []models.JSONMapper{
 		{
 			"city":      "Hong Kong",
 			"org":       "starbucks",
@@ -99,20 +98,20 @@ func CreateStoreJSONList() []fileModels.JSONMapper {
 	return items
 }
 
-func CreateStoreModel() *storeModels.Store {
+func CreateStoreModel() *models.Store {
 	item := CreateStoreJSON(uint64(5), "Mustum Bugdum", "starbucks", "Hong Kong", "CN")
-	st, err := storeModels.MapResultToStore(item)
+	st, err := models.MapResultToStore(item)
 	if err != nil {
 		return nil
 	}
 	return st
 }
 
-func CreateStoreModelList() []*storeModels.Store {
+func CreateStoreModelList() []*models.Store {
 	items := CreateStoreJSONList()
-	list := []*storeModels.Store{}
+	list := []*models.Store{}
 	for _, v := range items {
-		st, err := storeModels.MapResultToStore(v)
+		st, err := models.MapResultToStore(v)
 		if err == nil {
 			list = append(list, st)
 		}
