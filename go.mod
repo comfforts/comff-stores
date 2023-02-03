@@ -7,6 +7,7 @@ require (
 	github.com/comfforts/cloudstorage v0.1.0
 	github.com/comfforts/errors v0.1.1
 	github.com/comfforts/geocode v0.1.0
+	github.com/comfforts/geohash v0.0.1
 	github.com/comfforts/localstorage v0.1.0
 	github.com/comfforts/logger v0.1.1
 	github.com/comfforts/recorder v0.1.0
@@ -23,7 +24,7 @@ require (
 	gitlab.com/xerra/common/vincenty v0.0.0-20200407041038-0fe7b2620a3b
 	go.opencensus.io v0.24.0
 	go.uber.org/zap v1.24.0
-	google.golang.org/grpc v1.51.0
+	google.golang.org/grpc v1.52.0
 	google.golang.org/protobuf v1.28.1
 )
 
@@ -74,9 +75,9 @@ require (
 	github.com/subosito/gotenv v1.4.1 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
-	golang.org/x/net v0.0.0-20221014081412-f15817d10f9b // indirect
+	golang.org/x/net v0.4.0 // indirect
 	golang.org/x/oauth2 v0.0.0-20221014153046-6fdb5e3db783 // indirect
-	golang.org/x/sys v0.0.0-20220908164124-27713097b956 // indirect
+	golang.org/x/sys v0.3.0 // indirect
 	golang.org/x/text v0.5.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/api v0.107.0 // indirect

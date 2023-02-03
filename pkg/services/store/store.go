@@ -10,11 +10,11 @@ import (
 	"sync"
 
 	"github.com/comfforts/errors"
+	"github.com/comfforts/geohash"
 	"github.com/comfforts/logger"
 
 	"github.com/comfforts/comff-stores/pkg/constants"
 	"github.com/comfforts/comff-stores/pkg/models"
-	"github.com/comfforts/comff-stores/pkg/utils/geohash"
 	"go.uber.org/zap"
 
 	fileUtils "github.com/comfforts/comff-stores/pkg/utils/file"
