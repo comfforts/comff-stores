@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	storeModels "github.com/comfforts/comff-stores/pkg/models/store"
+	"github.com/comfforts/comff-stores/pkg/models"
 
 	testUtils "github.com/comfforts/comff-stores/pkg/utils/test"
 )
@@ -40,7 +40,8 @@ func setupStoreTest(t *testing.T) (
 	t.Helper()
 
 	appLogger := logger.NewTestAppLogger(TEST_DIR)
-	ss = NewStoreService(appLogger)
+	ss, err := NewStoreService(appLogger)
+	require.NoError(t, err)
 
 	return ss, func() {
 		t.Logf(" TestStoreService ended, will clear store data")
@@ -55,7 +56,7 @@ func testMapResultToStore(t *testing.T, ss *StoreService) {
 	storeId, name, org, city, country := 1, "Plaza Hollywood", "starbucks", "Hong Kong", "CN"
 	storeJSON := testUtils.CreateStoreJSON(uint64(storeId), name, org, city, country)
 
-	store, err := storeModels.MapResultToStore(storeJSON)
+	store, err := models.MapResultToStore(storeJSON)
 	require.NoError(t, err)
 
 	assert.Equal(t, store.StoreId, uint64(storeId), "storeId should be mapped")
@@ -70,7 +71,7 @@ func testAddStoreGetStats(t *testing.T, ss *StoreService) {
 	storeId, name, org, city, country := 1, "Plaza Hollywood", "starbucks", "Hong Kong", "CN"
 	sj := testUtils.CreateStoreJSON(uint64(storeId), name, org, city, country)
 
-	store, err := storeModels.MapResultToStore(sj)
+	store, err := models.MapResultToStore(sj)
 	require.NoError(t, err)
 
 	ctx := context.Background()
@@ -90,7 +91,7 @@ func testAddStoreGetStore(t *testing.T, ss *StoreService) {
 	storeId, name, org, city, country := 1, "Plaza Hollywood", "starbucks", "Hong Kong", "CN"
 	sj := testUtils.CreateStoreJSON(uint64(storeId), name, org, city, country)
 
-	store, err := storeModels.MapResultToStore(sj)
+	store, err := models.MapResultToStore(sj)
 	require.NoError(t, err)
 
 	ctx := context.Background()
@@ -109,7 +110,7 @@ func testAddStoreGetStore(t *testing.T, ss *StoreService) {
 	long, ok := sj["longitude"].(float64)
 	require.Equal(t, true, ok)
 
-	id, err := BuildId(lat, long, org)
+	id, err := ss.buildId(lat, long, org)
 	require.NoError(t, err)
 
 	savedStore, err := ss.GetStore(ctx, id)

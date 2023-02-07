@@ -10,12 +10,11 @@ import (
 	"sync"
 
 	"github.com/comfforts/errors"
+	"github.com/comfforts/geohash"
 	"github.com/comfforts/logger"
 
 	"github.com/comfforts/comff-stores/pkg/constants"
-	fileModels "github.com/comfforts/comff-stores/pkg/models/file"
-	storeModels "github.com/comfforts/comff-stores/pkg/models/store"
-	"github.com/comfforts/comff-stores/pkg/utils/geohash"
+	"github.com/comfforts/comff-stores/pkg/models"
 	"go.uber.org/zap"
 
 	fileUtils "github.com/comfforts/comff-stores/pkg/utils/file"
@@ -24,31 +23,39 @@ import (
 )
 
 type StoreService struct {
-	mu      sync.RWMutex
-	logger  logger.AppLogger
-	stores  map[string]*storeModels.Store
-	hashMap map[string][]string
-	count   int
-	ready   bool
+	mu        sync.RWMutex
+	logger    logger.AppLogger
+	stores    map[string]*models.Store
+	hashMap   map[string][]string
+	geoHasher geohash.GeoHash
+	count     int
+	ready     bool
 }
 
-func NewStoreService(logger logger.AppLogger) *StoreService {
-	ss := &StoreService{
-		logger:  logger,
-		stores:  map[string]*storeModels.Store{},
-		hashMap: map[string][]string{},
-		count:   0,
-		ready:   false,
+func NewStoreService(logger logger.AppLogger) (*StoreService, error) {
+	gh, err := geohash.NewGeoHasher(geohash.TALWAR)
+	if err != nil {
+		logger.Error("error creating geo hasher", zap.Error(err))
+		return nil, errors.WrapError(err, "error creating geo hasher")
 	}
 
-	return ss
+	ss := &StoreService{
+		logger:    logger,
+		stores:    map[string]*models.Store{},
+		hashMap:   map[string][]string{},
+		geoHasher: gh,
+		count:     0,
+		ready:     false,
+	}
+
+	return ss, nil
 }
 
-func (ss *StoreService) AddStore(ctx context.Context, s *storeModels.Store) (*storeModels.Store, error) {
+func (ss *StoreService) AddStore(ctx context.Context, s *models.Store) (*models.Store, error) {
 	ss.mu.Lock()
 	defer ss.mu.Unlock()
 
-	hashKey, err := geohash.Encode(s.Latitude, s.Longitude, 8)
+	hashKey, err := ss.geoHasher.Encode(s.Latitude, s.Longitude, 8)
 	if err != nil {
 		ss.logger.Error(constants.ERROR_ENCODING_LAT_LONG, zap.Float64("latitude", s.Latitude), zap.Float64("longitude", s.Longitude))
 		return nil, errors.WrapError(err, constants.ERROR_ENCODING_LAT_LONG)
@@ -56,7 +63,7 @@ func (ss *StoreService) AddStore(ctx context.Context, s *storeModels.Store) (*st
 
 	id := s.ID
 	if id == "" {
-		id, err := BuildId(s.Latitude, s.Longitude, s.Org)
+		id, err := ss.buildId(s.Latitude, s.Longitude, s.Org)
 		if err != nil {
 			ss.logger.Error(constants.ERROR_ENCODING_ID, zap.String("org", s.Org), zap.Float64("latitude", s.Latitude), zap.Float64("longitude", s.Longitude))
 			return nil, errors.WrapError(err, constants.ERROR_ENCODING_LAT_LONG)
@@ -97,7 +104,7 @@ func (ss *StoreService) AddStore(ctx context.Context, s *storeModels.Store) (*st
 	return s, nil
 }
 
-func (ss *StoreService) GetStore(ctx context.Context, id string) (*storeModels.Store, error) {
+func (ss *StoreService) GetStore(ctx context.Context, id string) (*models.Store, error) {
 	s := ss.lookup(id)
 	if s == nil {
 		ss.logger.Error(constants.ERROR_NO_STORE_FOUND_FOR_ID, zap.String("id", id))
@@ -106,7 +113,7 @@ func (ss *StoreService) GetStore(ctx context.Context, id string) (*storeModels.S
 	return s, nil
 }
 
-func (ss *StoreService) GetStoresForGeoPoint(ctx context.Context, lat, long float64, dist int) ([]*storeModels.StoreGeo, error) {
+func (ss *StoreService) GetStoresForGeoPoint(ctx context.Context, lat, long float64, dist int) ([]*models.StoreGeo, error) {
 	ss.logger.Debug("getting stores for geopoint", zap.Float64("latitude", lat), zap.Float64("longitude", long), zap.Int("distance", dist))
 	ids, err := ss.getStoreIdsForLatLong(lat, long)
 	if err != nil {
@@ -114,7 +121,7 @@ func (ss *StoreService) GetStoresForGeoPoint(ctx context.Context, lat, long floa
 	}
 	ss.logger.Debug("found stores", zap.Int("numOfStores", len(ids)), zap.Float64("latitude", lat), zap.Float64("longitude", long))
 
-	stores := []*storeModels.StoreGeo{}
+	stores := []*models.StoreGeo{}
 	// origin := haversine.Point{Lat: lat, Lon: long}
 	origin := vincenty.LatLng{Latitude: lat, Longitude: long}
 	for _, v := range ids {
@@ -128,7 +135,7 @@ func (ss *StoreService) GetStoresForGeoPoint(ctx context.Context, lat, long floa
 		d := vincenty.Inverse(origin, pos)
 		// if float64(d) <= dist*1000 {
 		if d.Kilometers() <= float64(dist) {
-			stGeo := &storeModels.StoreGeo{
+			stGeo := &models.StoreGeo{
 				Store:    store,
 				Distance: d.Kilometers(),
 			}
@@ -139,16 +146,16 @@ func (ss *StoreService) GetStoresForGeoPoint(ctx context.Context, lat, long floa
 	return stores, nil
 }
 
-func (ss *StoreService) GetStoreStats() storeModels.StoreStats {
-	return storeModels.StoreStats{
+func (ss *StoreService) GetStoreStats() models.StoreStats {
+	return models.StoreStats{
 		Ready:     ss.ready,
 		Count:     ss.count,
 		HashCount: len(ss.hashMap),
 	}
 }
 
-func (ss *StoreService) GetAllStores() []*storeModels.Store {
-	stores := []*storeModels.Store{}
+func (ss *StoreService) GetAllStores() []*models.Store {
+	stores := []*models.Store{}
 	for _, v := range ss.stores {
 		stores = append(stores, v)
 	}
@@ -162,7 +169,7 @@ func (ss *StoreService) SetReady(ctx context.Context, ready bool) {
 func (ss *StoreService) Close() error {
 	ss.logger.Info("cleaning up store data structures")
 	ss.count = 0
-	ss.stores = map[string]*storeModels.Store{}
+	ss.stores = map[string]*models.Store{}
 	ss.hashMap = map[string][]string{}
 	ss.ready = false
 	return nil
@@ -170,9 +177,9 @@ func (ss *StoreService) Close() error {
 
 func (ss *StoreService) Reader(ctx context.Context, dataDir string) (*os.File, error) {
 	stores := ss.GetAllStores()
-	data := []fileModels.JSONMapper{}
+	data := []models.JSONMapper{}
 	for _, v := range stores {
-		data = append(data, fileModels.JSONMapper{
+		data = append(data, models.JSONMapper{
 			"id":        v.ID,
 			"store_id":  v.StoreId,
 			"city":      v.City,
@@ -209,7 +216,7 @@ func (ss *StoreService) Reader(ctx context.Context, dataDir string) (*os.File, e
 }
 
 func (ss *StoreService) getStoreIdsForLatLong(lat, long float64) ([]string, error) {
-	hashKey, err := geohash.Encode(lat, long, 8)
+	hashKey, err := ss.geoHasher.Encode(lat, long, 8)
 	if err != nil {
 		ss.logger.Error(constants.ERROR_ENCODING_LAT_LONG, zap.Float64("latitude", lat), zap.Float64("longitude", long))
 		return nil, errors.WrapError(err, constants.ERROR_ENCODING_LAT_LONG)
@@ -223,7 +230,7 @@ func (ss *StoreService) getStoreIdsForLatLong(lat, long float64) ([]string, erro
 	return ids, nil
 }
 
-func (ss *StoreService) lookup(k string) *storeModels.Store {
+func (ss *StoreService) lookup(k string) *models.Store {
 	v, ok := ss.stores[k]
 	if !ok {
 		return nil
@@ -231,8 +238,8 @@ func (ss *StoreService) lookup(k string) *storeModels.Store {
 	return v
 }
 
-func BuildId(lat, long float64, org string) (string, error) {
-	hPart, err := geohash.Encode(lat, long, 12)
+func (ss *StoreService) buildId(lat, long float64, org string) (string, error) {
+	hPart, err := ss.geoHasher.Encode(lat, long, 12)
 	if err != nil {
 		return "", errors.WrapError(err, constants.ERROR_ENCODING_LAT_LONG)
 	}

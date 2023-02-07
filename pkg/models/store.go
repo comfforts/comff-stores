@@ -1,4 +1,4 @@
-package store
+package models
 
 import (
 	"context"
@@ -11,7 +11,6 @@ import (
 	api "github.com/comfforts/comff-stores/api/v1"
 
 	"github.com/comfforts/comff-stores/pkg/constants"
-	fileModels "github.com/comfforts/comff-stores/pkg/models/file"
 )
 
 type Stores interface {
@@ -47,7 +46,7 @@ type StoreStats struct {
 	Ready     bool
 }
 
-func MapResultToStore(r fileModels.JSONMapper) (*Store, error) {
+func MapResultToStore(r JSONMapper) (*Store, error) {
 	storeJson, err := json.Marshal(r)
 	if err != nil {
 		return nil, errors.WrapError(err, constants.ERROR_MARSHALLING_RESULT)
@@ -61,8 +60,8 @@ func MapResultToStore(r fileModels.JSONMapper) (*Store, error) {
 	return &s, nil
 }
 
-func MapStoreToJSON(s *Store) fileModels.JSONMapper {
-	return fileModels.JSONMapper{
+func MapStoreToJSON(s *Store) JSONMapper {
+	return JSONMapper{
 		"id":        s.ID,
 		"name":      s.Name,
 		"org":       s.Org,

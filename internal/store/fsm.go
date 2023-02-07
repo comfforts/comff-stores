@@ -13,8 +13,7 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
 
-	fileModels "github.com/comfforts/comff-stores/pkg/models/file"
-	storeModels "github.com/comfforts/comff-stores/pkg/models/store"
+	"github.com/comfforts/comff-stores/pkg/models"
 	fileUtils "github.com/comfforts/comff-stores/pkg/utils/file"
 )
 
@@ -22,7 +21,7 @@ var _ raft.FSM = (*fsm)(nil)
 
 type fsm struct {
 	DataDir      string
-	StoreService storeModels.Stores
+	StoreService models.Stores
 	logger       logger.AppLogger
 }
 
@@ -51,14 +50,14 @@ func (fs *fsm) applyAddStore(b []byte) interface{} {
 	}
 
 	ctx := context.Background()
-	store, err := fs.StoreService.AddStore(ctx, storeModels.MapStoreRequestToStore(&req))
+	store, err := fs.StoreService.AddStore(ctx, models.MapStoreRequestToStore(&req))
 	if err != nil {
 		return err
 	}
 
 	return &api.AddStoreResponse{
 		Ok:    true,
-		Store: storeModels.MapStoreModelToResponse(store),
+		Store: models.MapStoreModelToResponse(store),
 	}
 }
 
@@ -89,12 +88,12 @@ func (fs *fsm) Restore(rf io.ReadCloser) error {
 
 	// while the array contains values
 	for dec.More() {
-		var result fileModels.JSONMapper
+		var result models.JSONMapper
 		err := dec.Decode(&result)
 		if err != nil {
 			fs.logger.Error(fileUtils.ERROR_DECODING_RESULT, zap.Error(err))
 		} else {
-			store, err := storeModels.MapResultToStore(result)
+			store, err := models.MapResultToStore(result)
 			if err != nil {
 				fs.logger.Error("error processing store data", zap.Error(err), zap.Any("storeJson", r))
 			}

@@ -88,7 +88,7 @@ message StoreUploadResponse {
 message Server {
     string id = 1;
     string rpcAddr = 2;
-    bool isLeader = 3; 
+    bool isLeader = 3;
 }
 
 message GetServersRequest {}

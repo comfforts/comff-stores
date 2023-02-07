@@ -30,8 +30,7 @@ import (
 
 	api "github.com/comfforts/comff-stores/api/v1"
 
-	fileModels "github.com/comfforts/comff-stores/pkg/models/file"
-	storeModels "github.com/comfforts/comff-stores/pkg/models/store"
+	"github.com/comfforts/comff-stores/pkg/models"
 )
 
 var _ api.StoresServer = (*grpcServer)(nil)
@@ -62,9 +61,9 @@ type Servicer interface {
 }
 
 type Config struct {
-	StoreService storeModels.Stores
+	StoreService models.Stores
 	GeoService   geocode.GeoCoder
-	StoreLoader  fileModels.Loader
+	StoreLoader  models.Loader
 	Authorizer   Authorizer
 	Servicer     Servicer
 	Logger       logger.AppLogger
@@ -165,7 +164,7 @@ func (s *grpcServer) AddStore(ctx context.Context, req *api.AddStoreRequest) (*a
 		return nil, err
 	}
 
-	store, err := s.StoreService.AddStore(ctx, storeModels.MapStoreRequestToStore(req))
+	store, err := s.StoreService.AddStore(ctx, models.MapStoreRequestToStore(req))
 	if store == nil || err != nil {
 		s.Logger.Error("store already exists", zap.Error(err))
 		st := status.New(codes.AlreadyExists, "store already exists")
@@ -177,7 +176,7 @@ func (s *grpcServer) AddStore(ctx context.Context, req *api.AddStoreRequest) (*a
 
 	return &api.AddStoreResponse{
 		Ok:    true,
-		Store: storeModels.MapStoreModelToResponse(store),
+		Store: models.MapStoreModelToResponse(store),
 	}, nil
 }
 
@@ -197,7 +196,7 @@ func (s *grpcServer) GetStore(ctx context.Context, req *api.GetStoreRequest) (*a
 		return nil, st.Err()
 	}
 	return &api.GetStoreResponse{
-		Store: storeModels.MapStoreModelToResponse(store),
+		Store: models.MapStoreModelToResponse(store),
 	}, nil
 }
 
@@ -252,7 +251,7 @@ func (s *grpcServer) SearchStore(ctx context.Context, req *api.SearchStoreReques
 	}
 
 	return &api.SearchStoreResponse{
-		Stores: storeModels.MapStoreListToResponse(stores),
+		Stores: models.MapStoreListToResponse(stores),
 		Geo: &api.Point{
 			Latitude:  req.Latitude,
 			Longitude: req.Longitude,

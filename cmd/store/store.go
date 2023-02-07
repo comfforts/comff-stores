@@ -124,7 +124,11 @@ func setupServer(appCfg *appConfig.Configuration, addr string, logger logger.App
 	}
 
 	logger.Info("initializing store service instance")
-	storeServ := store.NewStoreService(logger)
+	storeServ, err := store.NewStoreService(logger)
+	if err != nil {
+		logger.Fatal("error initializing store service", zap.Error(err))
+		return nil, nil, err
+	}
 
 	callbk := func() {
 		logger.Info("clearing server store data")

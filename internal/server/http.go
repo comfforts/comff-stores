@@ -12,25 +12,27 @@ import (
 	"google.golang.org/grpc/status"
 
 	api "github.com/comfforts/comff-stores/api/v1"
-	fileModels "github.com/comfforts/comff-stores/pkg/models/file"
-	storeModels "github.com/comfforts/comff-stores/pkg/models/store"
+	"github.com/comfforts/comff-stores/pkg/models"
 	"github.com/comfforts/comff-stores/pkg/services/store"
 )
 
 type httpServer struct {
-	StoreService storeModels.Stores
+	StoreService models.Stores
 	logger       logger.AppLogger
 }
 
-func newHTTPServer(ss storeModels.Stores, logger logger.AppLogger) *httpServer {
+func newHTTPServer(ss models.Stores, logger logger.AppLogger) *httpServer {
 	return &httpServer{
 		StoreService: ss,
 		logger:       logger,
 	}
 }
 
-func NewHTTPServer(addr string, logger logger.AppLogger) *http.Server {
-	css := store.NewStoreService(logger)
+func NewHTTPServer(addr string, logger logger.AppLogger) (*http.Server, error) {
+	css, err := store.NewStoreService(logger)
+	if err != nil {
+		return nil, err
+	}
 	httpsrv := newHTTPServer(css, logger)
 	r := mux.NewRouter()
 
@@ -39,19 +41,19 @@ func NewHTTPServer(addr string, logger logger.AppLogger) *http.Server {
 	return &http.Server{
 		Addr:    addr,
 		Handler: r,
-	}
+	}, nil
 }
 
 type AddStoreRequest struct {
-	Store fileModels.JSONMapper `json:"store"`
+	Store models.JSONMapper `json:"store"`
 }
 type AddStoreResponse struct {
-	Store fileModels.JSONMapper `json:"store"`
-	Ok    bool                  `json:"ok"`
+	Store models.JSONMapper `json:"store"`
+	Ok    bool              `json:"ok"`
 }
 
 func (s *httpServer) AddStore(w http.ResponseWriter, r *http.Request) {
-	var req fileModels.JSONMapper
+	var req models.JSONMapper
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		s.logger.Error("error decoding request", zap.Error(err))
@@ -59,7 +61,7 @@ func (s *httpServer) AddStore(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, st.Err().Error(), http.StatusInternalServerError)
 	}
 
-	stMod, err := storeModels.MapResultToStore(req)
+	stMod, err := models.MapResultToStore(req)
 	if err != nil {
 		s.logger.Error("error decoding store attributes", zap.Error(err))
 		st := status.New(codes.InvalidArgument, "invalid request")
@@ -76,7 +78,7 @@ func (s *httpServer) AddStore(w http.ResponseWriter, r *http.Request) {
 
 	resp := AddStoreResponse{
 		Ok:    true,
-		Store: storeModels.MapStoreToJSON(st),
+		Store: models.MapStoreToJSON(st),
 	}
 	err = json.NewEncoder(w).Encode(resp)
 	if err != nil {
@@ -90,8 +92,8 @@ type GetStoreRequest struct {
 	Id string `json:"id"`
 }
 type GetStoreResponse struct {
-	Store fileModels.JSONMapper `json:"store"`
-	Ok    bool                  `json:"ok"`
+	Store models.JSONMapper `json:"store"`
+	Ok    bool              `json:"ok"`
 }
 
 func (s *httpServer) GetStore(w http.ResponseWriter, r *http.Request) {
@@ -109,7 +111,7 @@ func (s *httpServer) GetStore(w http.ResponseWriter, r *http.Request) {
 
 	resp := GetStoreResponse{
 		Ok:    true,
-		Store: storeModels.MapStoreToJSON(st),
+		Store: models.MapStoreToJSON(st),
 	}
 	err = json.NewEncoder(w).Encode(resp)
 	if err != nil {
