@@ -6,8 +6,8 @@ require (
 	github.com/casbin/casbin v1.9.1
 	github.com/comfforts/cloudstorage v0.1.0
 	github.com/comfforts/errors v0.1.1
-	github.com/comfforts/geocode v0.1.0
-	github.com/comfforts/geohash v0.0.1
+	github.com/comfforts/geocode v0.1.1
+	github.com/comfforts/geohash v0.1.1
 	github.com/comfforts/localstorage v0.1.0
 	github.com/comfforts/logger v0.1.1
 	github.com/comfforts/recorder v0.1.0

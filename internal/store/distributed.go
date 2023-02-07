@@ -67,15 +67,22 @@ func NewDistributedStores(dataDir string, config Config) (*DistributedStores, er
 	l := &DistributedStores{
 		config: config,
 	}
-	l.setupStores(dataDir)
+	if err := l.setupStores(dataDir); err != nil {
+		return nil, err
+	}
 	if err := l.setupRaft(dataDir); err != nil {
 		return nil, err
 	}
 	return l, nil
 }
 
-func (ds *DistributedStores) setupStores(dataDir string) {
-	ds.stores = store.NewStoreService(ds.config.Logger)
+func (ds *DistributedStores) setupStores(dataDir string) error {
+	ss, err := store.NewStoreService(ds.config.Logger)
+	if err != nil {
+		return err
+	}
+	ds.stores = ss
+	return nil
 }
 
 func (ds *DistributedStores) setupRaft(dataDir string) error {

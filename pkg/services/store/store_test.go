@@ -40,7 +40,8 @@ func setupStoreTest(t *testing.T) (
 	t.Helper()
 
 	appLogger := logger.NewTestAppLogger(TEST_DIR)
-	ss = NewStoreService(appLogger)
+	ss, err := NewStoreService(appLogger)
+	require.NoError(t, err)
 
 	return ss, func() {
 		t.Logf(" TestStoreService ended, will clear store data")
@@ -109,7 +110,7 @@ func testAddStoreGetStore(t *testing.T, ss *StoreService) {
 	long, ok := sj["longitude"].(float64)
 	require.Equal(t, true, ok)
 
-	id, err := BuildId(lat, long, org)
+	id, err := ss.buildId(lat, long, org)
 	require.NoError(t, err)
 
 	savedStore, err := ss.GetStore(ctx, id)

@@ -28,8 +28,11 @@ func newHTTPServer(ss models.Stores, logger logger.AppLogger) *httpServer {
 	}
 }
 
-func NewHTTPServer(addr string, logger logger.AppLogger) *http.Server {
-	css := store.NewStoreService(logger)
+func NewHTTPServer(addr string, logger logger.AppLogger) (*http.Server, error) {
+	css, err := store.NewStoreService(logger)
+	if err != nil {
+		return nil, err
+	}
 	httpsrv := newHTTPServer(css, logger)
 	r := mux.NewRouter()
 
@@ -38,7 +41,7 @@ func NewHTTPServer(addr string, logger logger.AppLogger) *http.Server {
 	return &http.Server{
 		Addr:    addr,
 		Handler: r,
-	}
+	}, nil
 }
 
 type AddStoreRequest struct {

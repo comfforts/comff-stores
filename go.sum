@@ -92,10 +92,10 @@ github.com/comfforts/cloudstorage v0.1.0 h1:mWbcbOQ6c8HgFgNIdnCPCmZEpIqtprzfY4/E
 github.com/comfforts/cloudstorage v0.1.0/go.mod h1:zWhx86nMWz5PflBMQOCNU4kXNyuJiv2DYKShAbFNrdA=
 github.com/comfforts/errors v0.1.1 h1:5QgZQkDdxz+YJp7G+k8pqgfYlf+MK78LwV8e5aVF0Zk=
 github.com/comfforts/errors v0.1.1/go.mod h1:KUrap8ahQuKlPsx2N+6hnXN+/Db4qGTKamCP9bqeDC4=
-github.com/comfforts/geocode v0.1.0 h1:W8tWhIJ09wxtD3is96Y8rda7FwtgghKcWq/aDZOqI0c=
-github.com/comfforts/geocode v0.1.0/go.mod h1:Jvmr2Bt0G9TZKs8wsmR8uEIStELgsnCZzECIu6P25dY=
-github.com/comfforts/geohash v0.0.1 h1:GDraXk79xszRiQlF0GPR8RDeD3NUv4enjV4VimBntRA=
-github.com/comfforts/geohash v0.0.1/go.mod h1:XSnkko/b0JIgT59SJ6ga4eafThR9Vmz1+gIdLKNS4fs=
+github.com/comfforts/geocode v0.1.1 h1:oFuhQqPuvA5vWK+JJ1QCThLZozssgKPyc6BJeB1ldX0=
+github.com/comfforts/geocode v0.1.1/go.mod h1:Yl05cYhy4Er5nK0L8hB75SLA7mKeweXn+bOh3rwQOgE=
+github.com/comfforts/geohash v0.1.1 h1:PlhOY22cQmaA7cscntr136J2rhUaiX6+cBnwnSTEFVU=
+github.com/comfforts/geohash v0.1.1/go.mod h1:XSnkko/b0JIgT59SJ6ga4eafThR9Vmz1+gIdLKNS4fs=
 github.com/comfforts/localstorage v0.1.0 h1:JQqnfXo+jN/cSjdzy/ibuWFt/YF5jJvu6zw0mHEhTvE=
 github.com/comfforts/localstorage v0.1.0/go.mod h1:yGlrNZJGbW65t80782I28squQBkLbDwLcubXj84Psdk=
 github.com/comfforts/logger v0.1.1 h1:qmNby1PGAfUELD5AcOTvpFdtqS5QeEZzP5vKr4xy1uk=

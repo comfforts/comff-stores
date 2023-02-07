@@ -23,31 +23,39 @@ import (
 )
 
 type StoreService struct {
-	mu      sync.RWMutex
-	logger  logger.AppLogger
-	stores  map[string]*models.Store
-	hashMap map[string][]string
-	count   int
-	ready   bool
+	mu        sync.RWMutex
+	logger    logger.AppLogger
+	stores    map[string]*models.Store
+	hashMap   map[string][]string
+	geoHasher geohash.GeoHash
+	count     int
+	ready     bool
 }
 
-func NewStoreService(logger logger.AppLogger) *StoreService {
-	ss := &StoreService{
-		logger:  logger,
-		stores:  map[string]*models.Store{},
-		hashMap: map[string][]string{},
-		count:   0,
-		ready:   false,
+func NewStoreService(logger logger.AppLogger) (*StoreService, error) {
+	gh, err := geohash.NewGeoHasher(geohash.TALWAR)
+	if err != nil {
+		logger.Error("error creating geo hasher", zap.Error(err))
+		return nil, errors.WrapError(err, "error creating geo hasher")
 	}
 
-	return ss
+	ss := &StoreService{
+		logger:    logger,
+		stores:    map[string]*models.Store{},
+		hashMap:   map[string][]string{},
+		geoHasher: gh,
+		count:     0,
+		ready:     false,
+	}
+
+	return ss, nil
 }
 
 func (ss *StoreService) AddStore(ctx context.Context, s *models.Store) (*models.Store, error) {
 	ss.mu.Lock()
 	defer ss.mu.Unlock()
 
-	hashKey, err := geohash.Encode(s.Latitude, s.Longitude, 8)
+	hashKey, err := ss.geoHasher.Encode(s.Latitude, s.Longitude, 8)
 	if err != nil {
 		ss.logger.Error(constants.ERROR_ENCODING_LAT_LONG, zap.Float64("latitude", s.Latitude), zap.Float64("longitude", s.Longitude))
 		return nil, errors.WrapError(err, constants.ERROR_ENCODING_LAT_LONG)
@@ -55,7 +63,7 @@ func (ss *StoreService) AddStore(ctx context.Context, s *models.Store) (*models.
 
 	id := s.ID
 	if id == "" {
-		id, err := BuildId(s.Latitude, s.Longitude, s.Org)
+		id, err := ss.buildId(s.Latitude, s.Longitude, s.Org)
 		if err != nil {
 			ss.logger.Error(constants.ERROR_ENCODING_ID, zap.String("org", s.Org), zap.Float64("latitude", s.Latitude), zap.Float64("longitude", s.Longitude))
 			return nil, errors.WrapError(err, constants.ERROR_ENCODING_LAT_LONG)
@@ -208,7 +216,7 @@ func (ss *StoreService) Reader(ctx context.Context, dataDir string) (*os.File, e
 }
 
 func (ss *StoreService) getStoreIdsForLatLong(lat, long float64) ([]string, error) {
-	hashKey, err := geohash.Encode(lat, long, 8)
+	hashKey, err := ss.geoHasher.Encode(lat, long, 8)
 	if err != nil {
 		ss.logger.Error(constants.ERROR_ENCODING_LAT_LONG, zap.Float64("latitude", lat), zap.Float64("longitude", long))
 		return nil, errors.WrapError(err, constants.ERROR_ENCODING_LAT_LONG)
@@ -230,8 +238,8 @@ func (ss *StoreService) lookup(k string) *models.Store {
 	return v
 }
 
-func BuildId(lat, long float64, org string) (string, error) {
-	hPart, err := geohash.Encode(lat, long, 12)
+func (ss *StoreService) buildId(lat, long float64, org string) (string, error) {
+	hPart, err := ss.geoHasher.Encode(lat, long, 12)
 	if err != nil {
 		return "", errors.WrapError(err, constants.ERROR_ENCODING_LAT_LONG)
 	}

@@ -51,7 +51,8 @@ func setupStoreLoader(t *testing.T, testDir string) (
 	require.NoError(t, err)
 
 	appLogger := logger.NewTestAppLogger(TEST_DIR)
-	ss := store.NewStoreService(appLogger)
+	ss, err := store.NewStoreService(appLogger)
+	require.NoError(t, err)
 
 	t.Logf(" setupStoreLoader: getting app-config/loader-config %s", "test-config.json")
 	appCfg, err := config.GetAppConfig("test-config.json", appLogger)

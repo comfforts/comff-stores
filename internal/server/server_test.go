@@ -83,7 +83,8 @@ func setupTest(t *testing.T, fn func(*Config)) (
 	nbcc, nbClient, _ := newClient(config.NobodyClientCertFile, config.NobodyClientKeyFile)
 
 	appLogger := logger.NewTestAppLogger(TEST_DIR)
-	css := store.NewStoreService(appLogger)
+	css, err := store.NewStoreService(appLogger)
+	require.NoError(t, err)
 
 	modelFilePath := filepath.Join("../../cmd/store", config.PolicyFile(config.ACLModelFile))
 	policyFilePath := filepath.Join("../../cmd/store", config.PolicyFile(config.ACLPolicyFile))
@@ -173,10 +174,6 @@ func testAddAndGetStore(t *testing.T, client, nbClient api.StoresClient, config 
 	addStoreRes, err := client.AddStore(ctx, addStoreReq)
 	require.NoError(t, err)
 	require.Equal(t, addStoreRes.Ok, true)
-
-	id, err := store.BuildId(float64(addStoreReq.Latitude), float64(addStoreReq.Longitude), org)
-	require.NoError(t, err)
-	require.Equal(t, addStoreRes.Store.Id, id)
 
 	getStoreReq := &api.GetStoreRequest{Id: addStoreRes.Store.Id}
 	ctx = context.Background()
