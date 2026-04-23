@@ -1,13 +1,13 @@
 .DS_Store
 
-*/*/certs
-*/*/creds
-*/*/policies
-*/*/config.json
-*/*/test-config.json
-*/*/data
-*/*/logs
-*/*/geo
+env
+creds
+certs
+policies
 
-*/*/*/creds
-*/*/*/test-config.json
+logs
+data
+
+vendor
+
+go.sum
