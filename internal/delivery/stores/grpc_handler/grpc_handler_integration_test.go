@@ -269,21 +269,18 @@ func setupTest(t *testing.T) (client, nbClient api.StoresClient, teardown func()
 }
 
 func newClient(target config.ConfigurationTarget, lis net.Listener) (*grpc.ClientConn, api.StoresClient, []grpc.DialOption, error) {
-	caFilePath := "certs/ca.pem"
-	certFilePath := "certs/client.pem"
-	keyFilePath := "certs/client-key.pem"
+	clTLSCfg := envutils.BuildClientTLSConfig()
 	if target == config.NOBODY_CLIENT {
-		certFilePath = "certs/nobody-client.pem"
-		keyFilePath = "certs/nobody-client-key.pem"
+		clTLSCfg = envutils.BuildNobodyClientTLSConfig()
 	}
 
 	// Client TLS config
 	tlsConfig, err := config.SetupTLSConfig(&config.ConfigOpts{
 		Target: target,
 		Opts: &config.CustomOpts{
-			CAFilePath:   caFilePath,
-			CertFilePath: certFilePath,
-			KeyFilePath:  keyFilePath,
+			CAFilePath:   clTLSCfg.CAFilePath,
+			CertFilePath: clTLSCfg.CertFilePath,
+			KeyFilePath:  clTLSCfg.KeyFilePath,
 		},
 	})
 	if err != nil {
@@ -316,7 +313,7 @@ func newServer(ctx context.Context, addr string) (*grpc.Server, func() error, er
 	}
 
 	// Initialize MongoDB store
-	nmCfg := envutils.BuildMongoStoreConfig(false)
+	nmCfg := envutils.BuildMongoStoreConfig(true)
 	ms, err := mongostore.NewMongoStore(ctx, nmCfg)
 	if err != nil {
 		return nil, nil, err
@@ -367,18 +364,16 @@ func newServer(ctx context.Context, addr string) (*grpc.Server, func() error, er
 		return nil, closeFn, err
 	}
 
-	caFilePath := "certs/ca.pem"
-	certFilePath := "certs/server.pem"
-	keyFilePath := "certs/server-key.pem"
+	srvTLSCfg := envutils.BuildServerTLSConfig()
 
 	// Server TLS config
 	srvTLSConfig, err := config.SetupTLSConfig(&config.ConfigOpts{
 		Target: config.SERVER,
 		Addr:   addr,
 		Opts: &config.CustomOpts{
-			CAFilePath:   caFilePath,
-			CertFilePath: certFilePath,
-			KeyFilePath:  keyFilePath,
+			CAFilePath:   srvTLSCfg.CAFilePath,
+			CertFilePath: srvTLSCfg.CertFilePath,
+			KeyFilePath:  srvTLSCfg.KeyFilePath,
 		},
 	})
 	if err != nil {

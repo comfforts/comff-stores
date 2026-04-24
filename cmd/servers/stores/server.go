@@ -71,12 +71,12 @@ func main() {
 		panic(err)
 	}
 
-	startCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	startCtx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 	startCtx = logger.WithLogger(startCtx, l)
 
 	// Initialize MongoDB store
-	nmCfg := envutils.BuildMongoStoreConfig(false)
+	nmCfg := envutils.BuildMongoStoreConfig(true)
 	ms, err := mongostore.NewMongoStore(startCtx, nmCfg)
 	if err != nil {
 		l.Error("failed to initialize mongo store", "error", err.Error())
@@ -115,19 +115,16 @@ func main() {
 		panic(err)
 	}
 
-	// TLS certificate file paths - in a real deployment, these would likely come from environment variables or a secrets manager
-	caFilePath := "certs/local-certs/ca.pem"
-	certFilePath := "certs/local-certs/server.pem"
-	keyFilePath := "certs/local-certs/server-key.pem"
+	srvTLSCfg := envutils.BuildServerTLSConfig()
 
 	// Server TLS config
 	srvTLSConfig, err := config.SetupTLSConfig(&config.ConfigOpts{
 		Target: config.SERVER,
 		Addr:   listener.Addr().String(),
 		Opts: &config.CustomOpts{
-			CAFilePath:   caFilePath,
-			CertFilePath: certFilePath,
-			KeyFilePath:  keyFilePath,
+			CAFilePath:   srvTLSCfg.CAFilePath,
+			CertFilePath: srvTLSCfg.CertFilePath,
+			KeyFilePath:  srvTLSCfg.KeyFilePath,
 		},
 	})
 	if err != nil {

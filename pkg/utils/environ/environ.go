@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/comfforts/comff-stores/internal/domain/infra"
+	indom "github.com/comfforts/comff-stores/internal/domain/infra"
 	"github.com/comfforts/comff-stores/internal/infra/mongostore"
 )
 
-func BuildMongoStoreConfig(direct bool) infra.StoreConfig {
+func BuildMongoStoreConfig(direct bool) indom.StoreConfig {
 	dbProtocol := os.Getenv("MONGO_PROTOCOL")
 	dbUser := os.Getenv("MONGO_USERNAME")
 	dbPwd := os.Getenv("MONGO_PASSWORD")
@@ -35,4 +35,37 @@ func BuildMetricsConfig() (string, string) {
 		otelEndpoint = "otel-collector:4317"
 	}
 	return metricsPort, otelEndpoint
+}
+
+func BuildServerTLSConfig() indom.TLSConfig {
+	caFilePath := os.Getenv("TLS_CA_FILE")
+	certFilePath := os.Getenv("TLS_CERT_FILE")
+	keyFilePath := os.Getenv("TLS_KEY_FILE")
+	return indom.TLSConfig{
+		CAFilePath:   caFilePath,
+		CertFilePath: certFilePath,
+		KeyFilePath:  keyFilePath,
+	}
+}
+
+func BuildClientTLSConfig() indom.TLSConfig {
+	caFilePath := os.Getenv("CLIENT_TLS_CA_FILE")
+	certFilePath := os.Getenv("CLIENT_TLS_CERT_FILE")
+	keyFilePath := os.Getenv("CLIENT_TLS_KEY_FILE")
+	return indom.TLSConfig{
+		CAFilePath:   caFilePath,
+		CertFilePath: certFilePath,
+		KeyFilePath:  keyFilePath,
+	}
+}
+
+func BuildNobodyClientTLSConfig() indom.TLSConfig {
+	caFilePath := os.Getenv("NB_CLIENT_TLS_CA_FILE")
+	certFilePath := os.Getenv("NB_CLIENT_TLS_CERT_FILE")
+	keyFilePath := os.Getenv("NB_CLIENT_TLS_KEY_FILE")
+	return indom.TLSConfig{
+		CAFilePath:   caFilePath,
+		CertFilePath: certFilePath,
+		KeyFilePath:  keyFilePath,
+	}
 }

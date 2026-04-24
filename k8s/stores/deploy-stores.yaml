@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stores-server
+  namespace: comff
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: stores-server }
+  template:
+    metadata:
+      labels: { app: stores-server }
+    spec:
+      containers:
+        - name: stores-server
+          # image: stores-server-arm64:debug-v0.0.2
+          image: stores-server-arm64:prod-v0.0.2
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 62151
+              name: grpc
+            - containerPort: 9467
+              name: metrics
+          envFrom:
+            - configMapRef:
+                name: stores-config
+            - secretRef:
+                name: stores-secret
+          volumeMounts:
+            - name: stores-grpc-server-certs
+              mountPath: /app/server-certs
+              readOnly: true
+            - name: geo-grpc-client-certs
+              mountPath: /app/certs
+              readOnly: true
+            - name: stores-policy
+              mountPath: /app/policies/policy.csv
+              subPath: policy.csv
+              readOnly: true
+          resources:
+            requests:
+              cpu: 25m
+              memory: 512Mi
+            limits:
+              cpu: 100m
+              memory: 1Gi
+
+      volumes:
+        - name: stores-grpc-server-certs
+          secret:
+            secretName: stores-grpc-server-tls
+            items:
+              # cert-manager TLS secret key names are typically tls.crt/tls.key/ca.crt
+              - key: tls.crt
+                path: server.pem
+              - key: tls.key
+                path: server-key.pem
+              - key: ca.crt
+                path: ca.pem
+        - name: geo-grpc-client-certs
+          secret:
+            secretName: geo-grpc-client-tls
+            items:
+              # cert-manager TLS secret key names are typically tls.crt/tls.key/ca.crt
+              - key: tls.crt
+                path: geo-client.pem
+              - key: tls.key
+                path: geo-client-key.pem
+              - key: ca.crt
+                path: ca.pem
+        - name: stores-policy
+          configMap:
+            name: stores-policy

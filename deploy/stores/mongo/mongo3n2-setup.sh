@@ -2,8 +2,8 @@
 set -euo pipefail
 
 # ---- Config (env or defaults) -----------------------------------
-MONGO_REPLICA_SET_NAME="${MONGO_REPLICA_SET_NAME:-stores-rs}"
-MONGO_HOST="${MONGO_HOST:-stores-mongo:27017}"
+MONGO_REPLICA_SET_NAME="${MONGO_REPLICA_SET_NAME:-rs0}"
+MONGO_HOST="${MONGO_HOST:-comff-mongo:27017}"
 
 RS_URI="mongodb://${MONGO_HOST_LIST}/?replicaSet=${MONGO_REPLICA_SET_NAME}&directConnection=false"
 
@@ -24,8 +24,8 @@ mongosh "mongodb://${MONGO_HOST}/?directConnection=true" --quiet --eval "
       _id: '${MONGO_REPLICA_SET_NAME}',
       members: [
         { _id: 0, host: '${MONGO_HOST}', priority: 2 },
-        { _id: 1, host: 'stores-mongo-rep1', priority: 1 },
-        { _id: 2, host: 'stores-mongo-rep2', priority: 1 }
+        { _id: 1, host: 'comff-mongo-rep1', priority: 1 },
+        { _id: 2, host: 'comff-mongo-rep2', priority: 1 }
       ],
       settings: { electionTimeoutMillis: 10000 }
     });

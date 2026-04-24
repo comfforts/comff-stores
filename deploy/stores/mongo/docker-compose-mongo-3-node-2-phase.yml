@@ -13,13 +13,13 @@ x-healthcheck: &hc
   retries: 30
 
 networks:
-  storesnet:
+  comffnet:
     external: true
 
 volumes:
-  stores-mongo-data:
-  stores-mongo-rep1-data:
-  stores-mongo-rep2-data:
+  comff-mongo-data:
+  comff-mongo-rep1-data:
+  comff-mongo-rep2-data:
 
 # ------------------------------
 # PHASE 1: BOOTSTRAP (no auth)
@@ -27,41 +27,41 @@ volumes:
 services:
   mongo1-bootstrap:
     image: mongo:8.0
-    container_name: stores-mongo
+    container_name: comff-mongo
     profiles: ["bootstrap"]
     volumes:
-      - stores-mongo-data:/data/db
+      - comff-mongo-data:/data/db
     ports:
       - "27017:27017"
     healthcheck: *hc
     command: ["mongod", "--replSet=${MONGO_REPLICA_SET_NAME}", "--bind_ip_all"]
     networks:
-      storesnet:
+      comffnet:
 
   mongo2-bootstrap:
     profiles: ["bootstrap"]
     image: mongo:8.0
-    container_name: stores-mongo-rep1
+    container_name: comff-mongo-rep1
     volumes:
-      - stores-mongo-rep1-data:/data/db
+      - comff-mongo-rep1-data:/data/db
     healthcheck: *hc
     command: ["mongod", "--replSet=${MONGO_REPLICA_SET_NAME}", "--bind_ip_all"]
     networks:
-      storesnet:
+      comffnet:
   mongo3-bootstrap:
     profiles: ["bootstrap"]
     image: mongo:8.0
-    container_name: stores-mongo-rep2
+    container_name: comff-mongo-rep2
     volumes:
-      - stores-mongo-rep2-data:/data/db
+      - comff-mongo-rep2-data:/data/db
     healthcheck: *hc
     command: ["mongod", "--replSet=${MONGO_REPLICA_SET_NAME}", "--bind_ip_all"]
     networks:
-      storesnet:
+      comffnet:
   mongo-setup:
     profiles: ["bootstrap"]
     image: mongo:8.0
-    container_name: stores-mongo-setup
+    container_name: comff-mongo-setup
     env_file:
       - ../../../env/mongo3n2.env
     volumes:
@@ -72,7 +72,7 @@ services:
       mongo2-bootstrap: { condition: service_healthy }
       mongo3-bootstrap: { condition: service_healthy }
     networks:
-      storesnet:
+      comffnet:
 
 # ------------------------------
 # PHASE 2: SECURE (auth + keyFile)
@@ -80,11 +80,11 @@ services:
   mongo1-secure:
     profiles: ["secure"]
     image: mongo:8.0
-    container_name: stores-mongo
+    container_name: comff-mongo
     env_file:
       - ../../../env/mongo3n2.env
     volumes:
-      - stores-mongo-data:/data/db
+      - comff-mongo-data:/data/db
       - ./mongo-keyfile:/etc/mongo-keyfile:ro
       # - ./data/mongo/leader:/data/db:rw
     ports:
@@ -105,16 +105,16 @@ services:
         reservations:
           memory: 768m
     networks:
-      storesnet:
+      comffnet:
 
   mongo2-secure:
     profiles: ["secure"]
     image: mongo:8.0
-    container_name: stores-mongo-rep1
+    container_name: comff-mongo-rep1
     env_file:
       - ../../../env/mongo3n2.env
     volumes:
-      - stores-mongo-rep1-data:/data/db
+      - comff-mongo-rep1-data:/data/db
       - ./mongo-keyfile:/etc/mongo-keyfile:ro
       # - ./data/mongo/rep1:/data/db:rw
     healthcheck: *hc
@@ -133,16 +133,16 @@ services:
         reservations:
           memory: 512m
     networks:
-      storesnet:
+      comffnet:
 
   mongo3-secure:
     profiles: ["secure"]
     image: mongo:8.0
-    container_name: stores-mongo-rep2
+    container_name: comff-mongo-rep2
     env_file:
       - ../../../env/mongo3n2.env
     volumes:
-      - stores-mongo-rep2-data:/data/db
+      - comff-mongo-rep2-data:/data/db
       - ./mongo-keyfile:/etc/mongo-keyfile:ro
       # - ./data/mongo/rep2:/data/db:rw
     healthcheck: *hc
@@ -161,4 +161,4 @@ services:
         reservations:
           memory: 512m
     networks:
-      storesnet:
+      comffnet:

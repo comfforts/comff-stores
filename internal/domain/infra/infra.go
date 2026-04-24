@@ -15,6 +15,12 @@ var (
 
 type CloseFn func(ctx context.Context) error
 
+type TLSConfig struct {
+	CAFilePath   string
+	CertFilePath string
+	KeyFilePath  string
+}
+
 type DBStore interface {
 	Store() *mongo.Database
 	EnsureIndexes(ctx context.Context, collectionName string, indexes []mongo.IndexModel) error

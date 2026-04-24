@@ -5,6 +5,11 @@ creds
 certs
 policies
 
+stores-creds.yaml
+stores-secret.yaml
+stores-policy.yaml
+stores-config.yaml
+
 logs
 data
 
