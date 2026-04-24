@@ -10,9 +10,6 @@ stores-secret.yaml
 stores-policy.yaml
 stores-config.yaml
 
-logs
-data
-
 vendor
 
 go.sum
