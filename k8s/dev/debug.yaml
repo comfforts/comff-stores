@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: jump
+  namespace: comff
+spec:
+  terminationGracePeriodSeconds: 5
+  containers:
+    - name: jump
+      image: ubuntu
+      tty: true
+      stdin: true

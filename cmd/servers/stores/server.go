@@ -71,7 +71,7 @@ func main() {
 		panic(err)
 	}
 
-	startCtx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	startCtx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
 	startCtx = logger.WithLogger(startCtx, l)
 
@@ -92,7 +92,7 @@ func main() {
 
 	// Initialize geo client options
 	clientOpts := geocl.NewDefaultClientOption()
-	clientOpts.Caller = "geo-service-geo-client-test"
+	clientOpts.Caller = "stores-service-geo-client"
 
 	// Initialize geo client
 	gc, err := geocl.NewClient(startCtx, clientOpts)
@@ -136,7 +136,7 @@ func main() {
 	// Initialize observability (metrics server and tracing)
 	metricAddr, otelEndpoint := envutils.BuildMetricsConfig()
 	metricsOpts := observability.InitOptions{
-		ServiceName:  "geo-server",
+		ServiceName:  "stores-server",
 		MetricsAddr:  metricAddr,
 		OTLPEndpoint: otelEndpoint,
 	}
@@ -163,7 +163,7 @@ func main() {
 	// Start the gRPC server in a goroutine
 	go func() {
 		l.Info(
-			"grpc server serving",
+			"stores grpc server serving",
 			"listen_addr", listener.Addr().String(),
 			"service_info", server.GetServiceInfo(),
 		)
@@ -173,13 +173,13 @@ func main() {
 	}()
 
 	// Wait for an interrupt signal to gracefully shut down the server
-	l.Info("waiting for shutdown signal")
+	l.Info("stores grpc server waiting for shutdown signal")
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	sig := <-quit
 
 	// On stop signal, gracefully stop the server
-	l.Info("received shutdown signal", "signal", sig.String(), "shutdown_timeout", "10s")
+	l.Info("stores grpc server received shutdown signal", "signal", sig.String(), "shutdown_timeout", "10s")
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 
 	defer func() {
@@ -193,7 +193,7 @@ func main() {
 
 	err = metricsServer.Shutdown(shutdownCtx)
 	if err != nil {
-		l.Error("failed to shut down metrics server", "error", err.Error())
+		l.Error("failed to shut down stores metrics server", "error", err.Error())
 	}
 
 	if err = sr.Close(shutdownCtx); err != nil {

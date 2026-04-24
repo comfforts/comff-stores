@@ -10,6 +10,9 @@ resources:
   # config
   - stores-config.yaml
 
+  # secret
+  - stores-secret.yaml
+
   # service + workload
   - deploy-stores.yaml
   - svc-stores.yaml
