@@ -13,8 +13,8 @@ spec:
     spec:
       containers:
         - name: stores-server
-          image: stores-server-arm64:debug-v0.0.2
-          # image: stores-server-arm64:prod-v0.0.2
+          # image: stores-server-arm64:debug-v0.0.2
+          image: stores-server-arm64:prod-v0.0.2
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 62151

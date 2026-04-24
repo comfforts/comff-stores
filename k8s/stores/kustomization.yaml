@@ -13,6 +13,9 @@ resources:
   # secret
   - stores-secret.yaml
 
+  # policy
+  - stores-policy.yaml
+
   # service + workload
   - deploy-stores.yaml
   - svc-stores.yaml
