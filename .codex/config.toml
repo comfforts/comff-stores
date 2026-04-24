@@ -1,0 +1,24 @@
+ignore_default_excludes = false
+
+exclude = [
+  ".git/**",
+  "vendor/**",
+  
+  "charts/**",
+  "tmp/**",
+  ".notes/**",
+  "**/data/**",
+  "**/logs/**",
+  "coverage.*",
+
+  "mongo-keyfile",
+  "**/certs/**",
+  "**/creds/**",
+  "certs/**",
+  "creds/**",
+  "**/*.env",
+  ".env",
+  "env/**",
+  "policies/**",
+  "**/policies/**",
+]

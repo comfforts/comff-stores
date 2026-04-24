@@ -12,26 +12,21 @@
             "program": "${fileDirname}"
         },
         {
-            "name": "Launch Agent",
+            "name": "Launch Store Server",
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            "program": "cmd/cli/comffstore.go",
-            "args": ["--data-dir", "data", "--bootstrap", "true"]
+            "program": "cmd/servers/stores/server.go",
+            "envFile": "${workspaceFolder}/env/stores.env",
+            "args": ["-v"],
         },
         {
-            "name": "Launch Store",
+            "name": "Launch client test",
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            "program": "cmd/store/store.go"
+            "program": "cmd/clients/stores/client.go",
+            "args": ["-v"],
         },
-        {
-            "name": "Launch Client",
-            "type": "go",
-            "request": "launch",
-            "mode": "auto",
-            "program": "cmd/client/client.go"
-        }
     ]
 }

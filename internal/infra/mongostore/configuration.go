@@ -1,0 +1,152 @@
+package mongostore
+
+import (
+	"errors"
+	"fmt"
+	"strings"
+
+	"github.com/comfforts/comff-stores/internal/domain/infra"
+)
+
+const (
+	ERR_REQUIRED_PARAMS      = "host & protocol are required"
+	ERR_REQUIRED_CONN_PARAMS = "connection params are required"
+	ERR_MISSING_DB_NAME      = "missing database name"
+	ERR_MONGO_CLIENT_CONN    = "error connecting with mongo client"
+	ERR_MONGO_CLIENT_DISCONN = "error disconnecting with mongo client"
+	ERR_MISSING_COLL_DOC     = "missing collection or document"
+	ERR_DECODING_OBJECT_ID   = "error decoding object ID from MongoDB"
+)
+
+var (
+	ErrRequiredParams         = errors.New(ERR_REQUIRED_PARAMS)
+	ErrRequiredConnParams     = errors.New(ERR_REQUIRED_CONN_PARAMS)
+	ErrMissingDBName          = errors.New(ERR_MISSING_DB_NAME)
+	ErrMongoClientConn        = errors.New(ERR_MONGO_CLIENT_CONN)
+	ErrMongoClientDisconn     = errors.New(ERR_MONGO_CLIENT_DISCONN)
+	ErrMissingCollectionOrDoc = errors.New(ERR_MISSING_COLL_DOC)
+	ErrDecodeObjectId         = errors.New(ERR_DECODING_OBJECT_ID)
+)
+
+type MongoDBConfig struct {
+	protocol string
+	host     string
+	user     string
+	pwd      string
+	params   string
+	name     string
+}
+
+func NewMongoDBConfig(protocol, host, user, pwd, params, name string) MongoDBConfig {
+	return MongoDBConfig{
+		protocol: protocol,
+		host:     host,
+		user:     user,
+		pwd:      pwd,
+		params:   params,
+		name:     name,
+	}
+}
+
+func (rc MongoDBConfig) Protocol() string { return rc.protocol }
+func (rc MongoDBConfig) Host() string     { return rc.host }
+func (rc MongoDBConfig) User() string     { return rc.user }
+func (rc MongoDBConfig) Pwd() string      { return rc.pwd }
+func (rc MongoDBConfig) Params() string   { return rc.params }
+func (rc MongoDBConfig) Name() string     { return rc.name }
+
+// ConnectionBuilder is an interface for building a MongoDB connection string.
+type ConnectionBuilder interface {
+	// Build returns a connection string based on the protocol, host, user, password, and
+	// connection parameters. It returns an error if required parameters are missing or if the
+	// protocol is "mongodb" and connection parameters are not provided.
+	Build() (string, error)
+	// WithUser sets the user for the connection string.
+	WithUser(u string) ConnectionBuilder
+	// WithPassword sets the password for the connection string.
+	WithPassword(p string) ConnectionBuilder
+	// WithDatabase sets the database for the connection string.
+	WithDatabase(db string) ConnectionBuilder
+	// WithConnectionParams sets the connection parameters for the connection string.
+	WithConnectionParams(p string) ConnectionBuilder
+}
+
+// mongoConnectionBuilder is a ConnectionBuilder implementation for creating MongoDB connection strings.
+type mongoConnectionBuilder struct {
+	protocol string
+	host     string
+	user     string
+	pwd      string
+	database string
+	params   string
+}
+
+// NewMongoConnectionBuilder creates a new mongoConnectionBuilder
+// with the specified protocol and host & returns instance pointer.
+func NewMongoConnectionBuilder(p, h string) mongoConnectionBuilder {
+	return mongoConnectionBuilder{
+		protocol: p,
+		host:     h,
+	}
+}
+
+func (b mongoConnectionBuilder) WithUser(u string) ConnectionBuilder {
+	b.user = u
+	return b
+}
+
+func (b mongoConnectionBuilder) WithPassword(p string) ConnectionBuilder {
+	b.pwd = p
+	return b
+}
+
+func (b mongoConnectionBuilder) WithDatabase(db string) ConnectionBuilder {
+	b.database = db
+	return b
+}
+
+func (b mongoConnectionBuilder) WithConnectionParams(p string) ConnectionBuilder {
+	b.params = p
+	return b
+}
+
+// Build constructs the MongoDB connection string based on the provided parameters.
+// It returns an error if required parameters are missing or if the protocol is "mongodb" and
+// connection parameters are not provided.
+// The connection string is formatted as "[protocol]://[user[:password]@]host[:port][/params]".
+func (b mongoConnectionBuilder) Build() (string, error) {
+	if b.protocol == "" || b.host == "" {
+		return "", ErrRequiredParams
+	}
+
+	if b.protocol == "mongodb" && (b.params == "" || b.database == "") {
+		return "", ErrRequiredConnParams
+	}
+
+	var sb strings.Builder
+	fmt.Fprintf(&sb, "%s://", b.protocol)
+
+	if b.user != "" {
+		sb.WriteString(b.user)
+		if b.pwd != "" {
+			sb.WriteString(":" + b.pwd)
+		}
+		sb.WriteString("@")
+	}
+
+	sb.WriteString(b.host)
+
+	if b.protocol == "mongodb" {
+		sb.WriteString("/" + b.database)
+		sb.WriteString(b.params)
+	}
+
+	return sb.String(), nil
+}
+
+// MongoClientOption holds the options for creating a new MongoDB client.
+type MongoStoreOption struct {
+	*infra.ClientOption
+	DBName   string
+	PoolSize uint64
+}

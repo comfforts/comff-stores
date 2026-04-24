@@ -1,0 +1,21 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: comff
+
+resources:
+  # certs
+  - certs
+
+  # config
+  - stores-config.yaml
+
+  # secret
+  - stores-secret.yaml
+
+  # policy
+  - stores-policy.yaml
+
+  # service + workload
+  - deploy-stores.yaml
+  - svc-stores.yaml

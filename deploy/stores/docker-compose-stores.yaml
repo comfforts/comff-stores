@@ -1,0 +1,87 @@
+
+# Docker Compose configuration for Geo server and its dependencies
+# This file defines the services, volumes, and networks needed to run the Geo server locally using Docker Compose.
+# It includes initialization services for libpostal data, embeddings model, policies, and credentials, as well as the main Geo server service.
+# The configuration is designed to mirror the production environment as closely as possible, while allowing for local development and testing.
+
+services:
+
+  policy-init:
+    image: debian:bookworm-slim
+    container_name: stores-policies
+    restart: "no"
+    volumes:
+      - stores_policy_data:/app/policies
+      - ../../cmd/servers/stores/policies/policy.csv:/seed/policy.csv:ro
+    command:
+      - sh
+      - -lc
+      - |
+        set -eux
+        mkdir -p /app/policies
+        # seed only if missing
+        if [ ! -f /app/policies/policy.csv ]; then
+          cp /seed/policy.csv /app/policies/policy.csv
+        fi
+    networks:
+      comffnet:
+  
+  stores-server:
+    profiles: ["prod"]
+    <<: &stores_server_base
+      # # Switch image for local dev
+      # image: ${STORES_IMAGE}
+      image: ${STORES_PROD_IMAGE}
+      platform: ${PLATFORM}
+      container_name: stores-server
+      build:
+        context: ../..
+        dockerfile: cmd/servers/stores/Dockerfile
+        target: ${DOCKER_TARGET_PROD}
+        args:
+          GO_VERSION: ${GO_VERSION}
+      depends_on:
+        policy-init:
+          condition: service_completed_successfully
+      ports:
+        - 62151:62151
+      # uncommnet env_file & environment for local dev image with direct env file; 
+      # comment out env_file & environment for prod and CI where config comes from k8s secrets and configmaps
+      # env_file:
+      #   - ../../env/stores.env
+      volumes:
+        - stores_policy_data:/app/policies:ro
+        # uncommnet certs for local dev image with direct bind mount;
+        # comment out for prod and CI where config comes from k8s secrets and configmaps
+        # - ../../cmd/servers/stores/certs/local-certs:/app/certs/local-certs:ro
+        # - ../../cmd/servers/stores/certs/ca.pem:/app/certs/ca.pem:ro
+        # - ../../cmd/servers/stores/certs/geo-client.pem:/app/certs/geo-client.pem:ro
+        # - ../../cmd/servers/stores/certs/geo-client-key.pem:/app/certs/geo-client-key.pem:ro
+      restart: unless-stopped
+      deploy:
+        resources:
+          limits:
+            memory: 1g
+          reservations:
+            memory: 512m
+      networks:
+        comffnet:
+  
+  stores-server-debug:
+    profiles: ["debug"]
+    <<: *stores_server_base
+    # image: ${STORES_DEBUG_IMAGE}
+    image: ${STORES_DEBUG_PROD_IMAGE}
+    container_name: stores-server-debug
+    build:
+      context: ../..
+      dockerfile: cmd/servers/stores/Dockerfile
+      target: ${DOCKER_TARGET_DEBUG}
+    restart: "no"
+
+volumes:
+  stores_policy_data:
+
+networks:
+  comffnet:
+    external: true

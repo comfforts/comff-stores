@@ -1,0 +1,89 @@
+syntax = "proto3";
+
+package stores.v1;
+
+option go_package = "github.com/comfforts/comff-stores/api/stores_v1";
+
+service Stores {
+    rpc AddStore(AddStoreRequest) returns (AddStoreResponse) {}
+    rpc GetStore(GetStoreRequest) returns (GetStoreResponse) {}
+
+    rpc UpdateStore(UpdateStoreRequest) returns (UpdateStoreResponse) {}
+    rpc DeleteStore(DeleteStoreRequest) returns (DeleteStoreResponse) {}
+
+    rpc SearchStore(SearchStoreRequest) returns (SearchStoreResponse) {}
+}
+
+message AddStoreRequest {
+    string  org = 1;
+    string  name = 2;
+    string  address_id = 3;
+    string  requested_by = 4;
+}
+
+message AddStoreResponse {
+    bool           ok = 1;
+    optional string id = 2;
+}
+
+message GetStoreRequest {
+    string id = 1;
+}
+
+message GetStoreResponse {
+    optional Store store = 1;
+}
+
+message Store {
+    string id = 1;
+    string name = 2;
+    string org = 3;
+    string address_id = 4;
+}
+
+message UpdateStoreRequest {
+    string id = 1;
+    string name = 2;
+    string org = 3;
+    string address_id = 4;
+    string requested_by = 5;
+}
+
+message UpdateStoreResponse {
+    bool            ok = 1;
+    optional Store  store = 2;
+}
+
+message DeleteStoreRequest {
+    string id = 1;
+    string requested_by = 2;
+}
+
+message DeleteStoreResponse {
+    bool ok = 1;
+}
+
+message SearchStoreRequest {
+    string  org = 1;
+    string  name = 2;
+    string address_id = 3;
+    string  address_str = 4;
+    double  latitude = 5;
+    double  longitude = 6;
+    uint32  distance = 7;
+}
+
+message SearchStoreResponse {
+    repeated StoreGeo stores = 1;
+    optional Point    geo = 2;
+}
+
+message StoreGeo {
+    Store          store = 1;
+    optional float distance = 2;
+}
+
+message Point {
+    double  latitude = 1;
+    double  longitude = 2;
+}

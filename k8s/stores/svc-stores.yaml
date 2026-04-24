@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: stores-server
+  namespace: comff
+spec:
+  selector: { app: stores-server }
+  ports:
+    - name: grpc
+      port: 62151
+      targetPort: 62151
+    - name: metrics
+      port: 9467
+      targetPort: 9467
