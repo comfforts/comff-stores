@@ -242,3 +242,10 @@ rm-stores-k:
 	@echo "removing stores from k8s cluster"
 	kubectl delete -k k8s/stores
 
+.PHONY: cp-stores-cl-certs-k
+cp-stores-cl-certs-k:
+	@echo "copying stores client certs"
+	kubectl -n comff get secret stores-grpc-client-tls -o jsonpath='{.data.ca\.crt}' | base64 --decode > ./cmd/clients/stores/certs/ca.pem
+	kubectl -n comff get secret stores-grpc-client-tls -o jsonpath='{.data.tls\.crt}' | base64 --decode > ./cmd/clients/stores/certs/client.pem
+	kubectl -n comff get secret stores-grpc-client-tls -o jsonpath='{.data.tls\.key}' | base64 --decode > ./cmd/clients/stores/certs/client-key.pem
+
