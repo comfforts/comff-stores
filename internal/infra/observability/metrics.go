@@ -23,16 +23,16 @@ type metrics struct {
 }
 
 func NewMetrics() (*metrics, error) {
-	meter := otel.Meter("geo-grpc")
-	inflight, err := meter.Int64UpDownCounter("geo_inflight_requests")
+	meter := otel.Meter("stores-grpc")
+	inflight, err := meter.Int64UpDownCounter("stores_inflight_requests")
 	if err != nil {
 		return nil, err
 	}
-	reqs, err := meter.Int64Counter("geo_requests_total")
+	reqs, err := meter.Int64Counter("stores_requests_total")
 	if err != nil {
 		return nil, err
 	}
-	reqDuration, err := meter.Float64Histogram("geo_request_duration_seconds")
+	reqDuration, err := meter.Float64Histogram("stores_request_duration_seconds")
 	if err != nil {
 		return nil, err
 	}
