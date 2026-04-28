@@ -2,6 +2,14 @@
 
 ## Developer's notes
 ### Setup
+#### Mongo
+- Generate `mongo-keyfile` in `deploy/stores/mongo`
+    - `openssl rand -base64 756 > mongo-keyfile && chmod 400 mongo-keyfile`
+- For local setup, add localhost entries for mongo nodes(container names) in `/etc/hosts` file.
+    - `make start-mongo START=bootstrap`
+    - Check logs for successful deployment: `docker logs <MONGO_HOST>-setup`
+    - `make start-mongo START=secure`
+    - `make stop-mongo`
 #### start
 - Setup mongo, metrics env vars
 - Setup server certs - `cmd/servers/stores/certs/local-certs/`

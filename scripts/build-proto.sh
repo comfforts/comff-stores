@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo " building geo service proto definition"
+echo " building stores service proto definition"
 echo "  ($(which protoc) - $(protoc --version))"
 if [ $? -ne 0 ]; then
   echo "  !!! protoc not found, please install it first"

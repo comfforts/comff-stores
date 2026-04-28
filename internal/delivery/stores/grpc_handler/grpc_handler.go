@@ -354,7 +354,7 @@ func decorateContext(ctx context.Context) (context.Context, error) {
 		l = logger.GetSlogLogger()
 	}
 
-	attrs := []any{"handler", "geo-grpc"}
+	attrs := []any{"handler", "stores-grpc"}
 	p, ok := peer.FromContext(ctx)
 	if ok {
 		attrs = append(attrs, "peer", p.Addr.String())
