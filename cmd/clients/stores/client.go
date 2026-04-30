@@ -21,18 +21,20 @@ func main() {
 
 	l := logger.GetSlogLogger()
 
-	// TLS certificate file paths - adjust as necessary
-	caFilePath := "certs/local-certs/ca.pem"
-	certFilePath := "certs/local-certs/client.pem"
-	keyFilePath := "certs/local-certs/client-key.pem"
+	// TLS certificate file paths
+	// Uncomment & adjust for local certs path
+	// caFilePath := "certs/local-certs/ca.pem"
+	// certFilePath := "certs/local-certs/client.pem"
+	// keyFilePath := "certs/local-certs/client-key.pem"
 
 	tlsConfig, err := config.SetupTLSConfig(&config.ConfigOpts{
 		Target: config.CLIENT,
-		Opts: &config.CustomOpts{
-			CAFilePath:   caFilePath,
-			CertFilePath: certFilePath,
-			KeyFilePath:  keyFilePath,
-		},
+		// Uncomment & adjust for local certs path
+		// Opts: &config.CustomOpts{
+		// 	CAFilePath:   caFilePath,
+		// 	CertFilePath: certFilePath,
+		// 	KeyFilePath:  keyFilePath,
+		// },
 	})
 	if err != nil {
 		l.Error("error setting client TLS", "error", err.Error())

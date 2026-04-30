@@ -1,7 +1,7 @@
 
-# Docker Compose configuration for Geo server and its dependencies
-# This file defines the services, volumes, and networks needed to run the Geo server locally using Docker Compose.
-# It includes initialization services for libpostal data, embeddings model, policies, and credentials, as well as the main Geo server service.
+# Docker Compose configuration for Stores server and its dependencies
+# This file defines the services, volumes, and networks needed to run the Stores server locally using Docker Compose.
+# It includes initialization for policies, and credentials, as well as the main Stores server service.
 # The configuration is designed to mirror the production environment as closely as possible, while allowing for local development and testing.
 
 services:
