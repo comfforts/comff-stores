@@ -12,7 +12,7 @@ import (
 	"time"
 
 	config "github.com/comfforts/comff-config"
-	geocl "github.com/comfforts/comff-geo-client"
+	geocl "github.com/comfforts/comff-geo/clients/go"
 	"github.com/comfforts/logger"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"

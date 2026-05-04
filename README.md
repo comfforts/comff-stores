@@ -83,7 +83,7 @@ Supported policy actions are:
 Runtime dependencies:
 
 - MongoDB for store persistence.
-- Comfforts Geo service through `github.com/comfforts/comff-geo-client`.
+- Comfforts Geo service through `github.com/comfforts/comff-geo/clients/go`.
 - cert-manager in Kubernetes for service certificates.
 - OpenTelemetry collector for trace export when `OTEL_ENDPOINT` is set.
 - Prometheus-compatible scraper for `/metrics`.
@@ -91,7 +91,7 @@ Runtime dependencies:
 Key Go dependencies:
 
 - `github.com/comfforts/comff-config`: TLS and authorization setup.
-- `github.com/comfforts/comff-geo-client`: Geo validation and geocoding client.
+- `github.com/comfforts/comff-geo/clients/go`: Geo validation and geocoding client.
 - `github.com/comfforts/logger`: structured logging and trace-aware context fields.
 - `google.golang.org/grpc`: gRPC server/client runtime.
 - `go.mongodb.org/mongo-driver`: MongoDB driver.

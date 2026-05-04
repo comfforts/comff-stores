@@ -22,8 +22,8 @@ github.com/comfforts/comff-config v0.1.14 h1:GjnNu22i1KcuoIzmnHxRxBUFHrGpr/b7LNK
 github.com/comfforts/comff-config v0.1.14/go.mod h1:0m+T50V3f5/vf0FJ4js/9AMp+aFX8YQKsGD2E2n2xB0=
 github.com/comfforts/comff-geo v0.3.26 h1:Yrm5CxZD5p3H9pdFfvUpGYiBMYAZzIbdnGPmzTlHqAA=
 github.com/comfforts/comff-geo v0.3.26/go.mod h1:I2n8DzU7e5a912rRDq5mlXvj9/iVltm17kgXHi6s8CQ=
-github.com/comfforts/comff-geo-client v0.2.14 h1:KaAJWPqUJQYfwtXGSsptr4Vk/ZYIRFV6iBoCxQDrDBw=
-github.com/comfforts/comff-geo-client v0.2.14/go.mod h1:E7uc86/ex6i3tEVN2eHzL3U5Jj4nyAawyHMWCRI4zEs=
+github.com/comfforts/comff-geo/clients/go v0.3.10 h1:B+vwZP+hRwyD1GT7ouDdkH/cWV7cHTLVwhN8vLgOQ6k=
+github.com/comfforts/comff-geo/clients/go v0.3.10/go.mod h1:E0Ohycv9m+1C+pdOPj73XoRBCBsai/rlP1NGjh2k9zs=
 github.com/comfforts/logger v0.2.18 h1:1ASYF0JfZjLFj+VvvWr1ppSk74Fig/n15wl/yry+PyY=
 github.com/comfforts/logger v0.2.18/go.mod h1:O/S6h9oNjj7wFeg71jzcvbIMavqKNem/bhQaedaRWzY=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=

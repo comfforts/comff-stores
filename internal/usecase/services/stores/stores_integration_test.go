@@ -8,8 +8,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	geocl "github.com/comfforts/comff-geo-client"
 	geo_v1 "github.com/comfforts/comff-geo/api/geo/v1"
+	geocl "github.com/comfforts/comff-geo/clients/go"
 	"github.com/comfforts/logger"
 
 	stdom "github.com/comfforts/comff-stores/internal/domain/stores"

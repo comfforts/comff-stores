@@ -9,8 +9,8 @@ import (
 	otelcodes "go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 
-	geocl "github.com/comfforts/comff-geo-client"
 	geo_v1 "github.com/comfforts/comff-geo/api/geo/v1"
+	geocl "github.com/comfforts/comff-geo/clients/go"
 	"github.com/comfforts/logger"
 
 	indom "github.com/comfforts/comff-stores/internal/domain/infra"

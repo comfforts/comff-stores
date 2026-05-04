@@ -16,8 +16,8 @@ import (
 	"google.golang.org/grpc/status"
 
 	config "github.com/comfforts/comff-config"
-	geocl "github.com/comfforts/comff-geo-client"
 	geo_v1 "github.com/comfforts/comff-geo/api/geo/v1"
+	geocl "github.com/comfforts/comff-geo/clients/go"
 	"github.com/comfforts/logger"
 
 	api "github.com/comfforts/comff-stores/api/stores/v1"

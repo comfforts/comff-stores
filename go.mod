@@ -5,7 +5,7 @@ go 1.25.9
 require (
 	github.com/comfforts/comff-config v0.1.14
 	github.com/comfforts/comff-geo v0.3.26
-	github.com/comfforts/comff-geo-client v0.2.14
+	github.com/comfforts/comff-geo/clients/go v0.3.10
 	github.com/comfforts/logger v0.2.18
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0
 	github.com/prometheus/client_golang v1.23.2
